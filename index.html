@@ -8,7 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bolão Copa 26">
 <title>Bolão da Família · Copa 2026</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>⚽</text></svg>">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
 <style>
 :root{
   --fundo:#0B1A11; --card:#142A1B; --card-alto:#1C3624;
@@ -188,6 +190,8 @@ main{padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 150px);max-width:5
 .ptime{display:flex;flex-direction:column;align-items:center;gap:4px;width:96px}
 .ptime .pflag{font-size:34px;line-height:1}
 .ptime .pnome{font-size:12px;font-weight:700;text-align:center;line-height:1.15}
+.goread{width:54px;height:54px;border-radius:14px;background:rgba(255,255,255,.03);border:1.5px dashed var(--borda);
+  color:var(--giz-suave);font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center}
 .pgol{width:54px;height:54px;border-radius:14px;background:var(--card-alto);border:1.5px solid var(--borda);
   color:var(--giz);font-size:24px;font-weight:800;text-align:center;outline:none;-moz-appearance:textfield}
 .pgol:focus{border-color:var(--ouro)}
@@ -464,14 +468,32 @@ function calcPontos(j, res) {
   for (const [letra] of GRUPOS) {
     const real = normPick(res.grupos[letra]);
     const meu = normPick(j.palpites && j.palpites[letra]);
-    if (real.p1) { definidos++; if (meu.p1 === real.p1) { pts += 2; acertos++; } }
-    if (real.p2) { definidos++; if (meu.p2 === real.p2) { pts += 1; acertos++; } }
+    if (real.p1) { definidos++; if (meu.p1 === real.p1) { pts += 3; acertos++; } }
+    if (real.p2) { definidos++; if (meu.p2 === real.p2) { pts += 2; acertos++; } }
     if (meu.p1) preenchidos++;
     if (meu.p2) preenchidos++;
   }
   const bonus = res.campeao && j.campeao === res.campeao ? 5 : 0;
   if (j.campeao) preenchidos++;
   return { acertos, definidos, bonus, pts: pts + bonus, preenchidos };
+}
+
+/* Pontos dos palpites de placar do Brasil (e jogos do mata-mata):
+   placar exato = 3 pts; errou o placar mas acertou o vencedor/empate = 1 pt */
+function calcBrasil(sl) {
+  let pts = 0, exatos = 0, vencedor = 0;
+  const preds = (S.brPalpites || {})[sl] || {};
+  const jogos = S.brJogos || {};
+  for (const gid in preds) {
+    const of = jogos[gid] && jogos[gid].oficial;
+    if (!of || of.b == null || of.b === "" || of.a == null || of.a === "") continue;
+    const p = preds[gid];
+    if (!p || p.b == null || p.a == null) continue;
+    const pb = +p.b, pa = +p.a, ob = +of.b, oa = +of.a;
+    if (pb === ob && pa === oa) { pts += 3; exatos++; }
+    else if (Math.sign(pb - pa) === Math.sign(ob - oa)) { pts += 1; vencedor++; }
+  }
+  return { pts, exatos, vencedor };
 }
 
 /* ---------- Ações ---------- */
@@ -552,27 +574,16 @@ async function salvarResultados() {
 }
 
 async function salvarBrasil() {
-  if (S.salvandoBr) return;
+  if (S.salvandoBr || !S.nome) return;
   S.salvandoBr = true; pintarSavebar();
-  let msg = "Palpites do Brasil salvos 🇧🇷", tipo = "";
+  let msg = "Seu palpite do Brasil foi salvo 🇧🇷", tipo = "";
   try {
-    const jogos = {};
-    for (const [id, j] of Object.entries(S.brOfTemp)) {
-      const of = j.oficial || {};
-      jogos[id] = { ordem: j.ordem || 0, fase: j.fase || "", adv: j.adv || null,
-        data: j.data || "", local: j.local || "",
-        oficial: { b: (of.b === "" || of.b == null) ? null : +of.b,
-                   a: (of.a === "" || of.a == null) ? null : +of.a } };
+    const meu = {};
+    for (const [gid, p] of Object.entries(S.brMeuTemp)) {
+      if (p && p.b != null && p.b !== "" && p.a != null && p.a !== "")
+        meu[gid] = { b: +p.b, a: +p.a };
     }
-    await set(ref(db, "bolao/brasil/jogos"), jogos);
-    if (S.nome) {
-      const meu = {};
-      for (const [gid, p] of Object.entries(S.brMeuTemp)) {
-        if (p && p.b != null && p.b !== "" && p.a != null && p.a !== "")
-          meu[gid] = { b: +p.b, a: +p.a };
-      }
-      await set(ref(db, "bolao/brasil/palpites/" + slug(S.nome)), meu);
-    }
+    await set(ref(db, "bolao/brasil/palpites/" + slug(S.nome)), meu);
     S.brSujo = false;
   } catch (e) {
     msg = "Não consegui salvar."; tipo = "erro";
@@ -663,7 +674,7 @@ function abaPalpites() {
   const preench = calcPontos({ palpites: S.palpites, campeao: S.campeao }, S.resultados).preenchidos;
   const topo = trava
     ? `<div class="lockband">🔒 <b>Palpites enviados${S.travadoEm ? " em " + new Date(S.travadoEm).toLocaleDateString("pt-BR") : ""}.</b> Estão travados — não dá mais pra trocar. Agora é torcer! 🍀</div>`
-    : `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Toque na seleção de <b>1º</b> e depois na de <b>2º</b> de cada grupo (toque de novo desmarca). Acertar o 1º vale 2 pts; o 2º, 1 pt. Vai salvando sozinho no teu celular — quando completar os 25, <b>envia</b> lá no fim.</div>`;
+    : `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Toque na seleção de <b>1º</b> e depois na de <b>2º</b> de cada grupo (toque de novo desmarca). Acertar o 1º vale 3 pts; o 2º, 2 pts. Vai salvando sozinho no teu celular — quando completar os 25, <b>envia</b> lá no fim.</div>`;
   const enviar = trava ? "" :
     `<div class="card" style="border-color:rgba(244,200,75,.35)">` +
       `<b style="font-size:15px;font-weight:800">Enviar palpites</b>` +
@@ -679,10 +690,16 @@ function abaPalpites() {
 
 function abaPlacar() {
   const ranking = S.jogadores
-    .map(j => ({ ...j, p: calcPontos(j, S.resultados) }))
-    .sort((a,b) => b.p.pts - a.p.pts || b.p.acertos - a.p.acertos ||
-      b.p.preenchidos - a.p.preenchidos || a.nome.localeCompare(b.nome,"pt-BR"));
-  const temRes = Object.keys(S.resultados.grupos).length > 0 || !!S.resultados.campeao;
+    .map(j => {
+      const p = calcPontos(j, S.resultados);
+      const br = calcBrasil(slug(j.nome));
+      return { ...j, p, br, total: p.pts + br.pts };
+    })
+    .sort((a,b) => b.total - a.total || b.p.acertos - a.p.acertos ||
+      b.br.exatos - a.br.exatos || b.p.preenchidos - a.p.preenchidos ||
+      a.nome.localeCompare(b.nome,"pt-BR"));
+  const algumOfBr = Object.values(S.brJogos || {}).some(g => g && g.oficial && g.oficial.b != null && g.oficial.a != null);
+  const temRes = Object.keys(S.resultados.grupos).length > 0 || !!S.resultados.campeao || algumOfBr;
   const medalhas = ["🥇","🥈","🥉"];
 
   const linhas = ranking.length === 0
@@ -693,10 +710,10 @@ function abaPlacar() {
       avatarHtml(j.nome,36) +
       `<span class="info"><b>${esc(j.nome)}${j.travado ? ' <span style="font-size:11px">🔒</span>' : ""}</b><small>${
         temRes
-          ? `${j.p.acertos} de ${j.p.definidos} posições${j.p.bonus ? " · campeão ✓" : ""}`
+          ? `${j.p.acertos} de ${j.p.definidos} posições${j.p.bonus ? " · campeão ✓" : ""}${j.br.pts ? ` · placar +${j.br.pts}` : ""}`
           : `${j.p.preenchidos}/25 palpites feitos`
       }</small></span>` +
-      `<span class="pts"><b>${j.p.pts}</b><small>PTS</small></span></div>`
+      `<span class="pts"><b>${j.total}</b><small>PTS</small></span></div>`
     ).join("");
 
   const grupos = GRUPOS.map(([l]) => {
@@ -730,7 +747,7 @@ function abaPlacar() {
 
   return `<div class="bloco" style="gap:22px">` +
     `<section><div class="sec-title">CLASSIFICAÇÃO · ${ranking.length} ${ranking.length === 1 ? "PESSOA" : "PESSOAS"}</div>` +
-    (!temRes ? `<div class="note" style="margin-bottom:10px">Os pontos aparecem quando os resultados forem marcados na aba <b>Resultados</b>. 1º colocado certo vale 2 pontos, 2º vale 1 e o campeão do mundo vale 5.</div>` : "") +
+    (!temRes ? `<div class="note" style="margin-bottom:10px">Os pontos aparecem conforme os resultados forem saindo. 1º colocado certo vale 3 pontos, 2º vale 2; acertar o placar de um jogo do Brasil vale 3 (ou 1 se acertar só o vencedor); e o campeão do mundo vale 5.</div>` : "") +
     `<div class="gap8">${linhas}</div></section>` +
     `<section><div class="sec-title">PALPITES POR GRUPO</div>` +
     `<div class="gap8">${grupos}${cardC}</div></section></div>`;
@@ -760,7 +777,7 @@ function pintarSavebar() {
   bar.className = "savebar" + (precisaSavebar() ? " on" : "");
   if (S.aba === "brasil") {
     const bt = bar.querySelector("button");
-    if (bt) { bt.disabled = S.salvandoBr || !S.brSujo; bt.textContent = S.salvandoBr ? "Salvando…" : "Salvar placares"; }
+    if (bt) { bt.disabled = S.salvandoBr || !S.brSujo; bt.textContent = S.salvandoBr ? "Salvando…" : "Salvar meu palpite"; }
   }
 }
 
@@ -804,23 +821,32 @@ function htmlJogoBr(j) {
   const advFlag = j.adv ? flagDe(j.adv) : "❓";
   const advNome = j.adv ? nomeDe(j.adv) : "A definir";
   const of = j.oficial || {};
+  const temOf = of.b != null && of.b !== "" && of.a != null && of.a !== "";
   const bi = bandInfo(of);
   const meu = S.brMeuTemp[j.id] || {};
-  const linha = (kind, vb, va) =>
+  const oficialRow =
     `<div class="placarrow">` +
       `<span class="ptime"><span class="pflag">🇧🇷</span><span class="pnome">Brasil</span></span>` +
-      `<input class="pgol" inputmode="numeric" maxlength="2" data-kind="${kind}" data-id="${j.id}" data-lado="b" value="${vb ?? ""}">` +
+      `<span class="goread">${temOf ? of.b : "–"}</span>` +
       `<span class="px">×</span>` +
-      `<input class="pgol" inputmode="numeric" maxlength="2" data-kind="${kind}" data-id="${j.id}" data-lado="a" value="${va ?? ""}">` +
+      `<span class="goread">${temOf ? of.a : "–"}</span>` +
+      `<span class="ptime"><span class="pflag">${advFlag}</span><span class="pnome">${esc(advNome)}</span></span>` +
+    `</div>`;
+  const meuRow =
+    `<div class="placarrow">` +
+      `<span class="ptime"><span class="pflag">🇧🇷</span><span class="pnome">Brasil</span></span>` +
+      `<input class="pgol" inputmode="numeric" maxlength="2" data-kind="me" data-id="${j.id}" data-lado="b" value="${meu.b ?? ""}">` +
+      `<span class="px">×</span>` +
+      `<input class="pgol" inputmode="numeric" maxlength="2" data-kind="me" data-id="${j.id}" data-lado="a" value="${meu.a ?? ""}">` +
       `<span class="ptime"><span class="pflag">${advFlag}</span><span class="pnome">${esc(advNome)}</span></span>` +
     `</div>`;
   return `<div class="card" style="position:relative">` +
     (!j.fixo ? `<button class="xdel" data-acao="delbr" data-id="${j.id}">✕</button>` : "") +
     `<div class="jbr-cab"><b style="color:var(--giz);font-weight:800;font-size:13px">${esc(j.fase)}</b><span>${esc(j.data || "")}</span></div>` +
     (j.local ? `<div class="apagado" style="font-size:11.5px;margin-top:2px">${esc(j.local)}</div>` : "") +
-    `<div class="brsub">Resultado oficial</div>` + linha("of", of.b, of.a) +
+    `<div class="brsub">Resultado oficial</div>` + oficialRow +
     `<div class="resband ${bi.cls}" id="band-of-${j.id}">${bi.tx}</div>` +
-    (S.nome ? `<div class="brsub">Seu palpite</div>` + linha("me", meu.b, meu.a) : "") +
+    (S.nome ? `<div class="brsub">Seu palpite</div>` + meuRow : "") +
     `<div class="brsub">Palpites da galera</div>` +
     `<div class="linhachips" id="chips-${j.id}">${chipsHtml(j.id)}</div>` +
   `</div>`;
@@ -846,7 +872,7 @@ function abaBrasil() {
       `</div></div>`
     : `<button class="btn" style="border:1.5px dashed rgba(244,200,75,.4);background:transparent;color:var(--ouro);font-size:14px;font-weight:700;padding:13px" data-acao="addbrtoggle">＋ Adicionar jogo do mata-mata</button>`;
   return `<div class="bloco">` +
-    `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Cada um informa seu <b>palpite de placar</b> dos jogos da Seleção — todo mundo vê o de todo mundo. Quando o jogo acabar, alguém preenche o <b>resultado oficial</b> e o app marca quem cravou o placar (✓). No mata-mata, adicione os jogos aqui embaixo. 🇧🇷</div>` +
+    `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Cada um informa só o <b>seu palpite de placar</b> dos jogos da Seleção — todo mundo vê o de todo mundo. O <b>resultado oficial</b> é preenchido depois que o jogo acaba e o app marca quem cravou o placar (✓). No mata-mata, adicione os jogos aqui embaixo. 🇧🇷</div>` +
     cards + form + `</div>`;
 }
 
@@ -885,8 +911,8 @@ function render() {
     btDis = S.salvando || !S.sujo;
     acSave = "salvar";
   } else if (S.aba === "brasil") {
-    stSave = "Placares alterados";
-    btSave = S.salvandoBr ? "Salvando…" : "Salvar placares";
+    stSave = "Palpite alterado";
+    btSave = S.salvandoBr ? "Salvando…" : "Salvar meu palpite";
     btDis = S.salvandoBr || !S.brSujo;
     acSave = "salvarbr";
   } else {
@@ -949,12 +975,17 @@ document.addEventListener("click", e => {
     const adv = $("#brAdv") ? $("#brAdv").value : "";
     const data = $("#brData") ? $("#brData").value.trim() : "";
     const id = "x" + Date.now();
-    S.brOfTemp[id] = { id, ordem: 100 + Object.keys(S.brOfTemp).length, fase, adv: adv || null, data, local: "", oficial: { b: null, a: null }, fixo: false };
-    S.brForm = false; S.brSujo = true; render();
+    const ordem = 100 + Object.keys(S.brOfTemp).length;
+    const jogo = { ordem, fase, adv: adv || null, data, local: "", oficial: { b: null, a: null } };
+    S.brOfTemp[id] = { id, fixo: false, ...jogo };
+    set(ref(db, "bolao/brasil/jogos/" + id), jogo);
+    S.brForm = false; render();
   }
   if (a === "delbr") {
-    delete S.brOfTemp[el.getAttribute("data-id")];
-    S.brSujo = true; render();
+    const id = el.getAttribute("data-id");
+    delete S.brOfTemp[id];
+    set(ref(db, "bolao/brasil/jogos/" + id), null);
+    render();
   }
 
   if (a === "pick") {

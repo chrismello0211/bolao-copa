@@ -1,0 +1,14 @@
+{
+  "name": "Bolão da Família · Copa 2026",
+  "short_name": "Bolão Copa 26",
+  "description": "Bolão da Copa 2026 da família",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B1A11",
+  "theme_color": "#0B1A11",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
