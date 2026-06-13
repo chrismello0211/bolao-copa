@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B1A11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bolão Copa 26">
+<title>Bolão da Família · Copa 2026</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>⚽</text></svg>">
+<style>
+:root{
+  --fundo:#0B1A11; --card:#142A1B; --card-alto:#1C3624;
+  --borda:rgba(242,239,230,.09);
+  --giz:#F2EFE6; --giz-suave:rgba(242,239,230,.62); --giz-apagado:rgba(242,239,230,.38);
+  --ouro:#F4C84B; --ouro-fundo:rgba(244,200,75,.13);
+  --verde:#34C77B; --verde-fundo:rgba(52,199,123,.14);
+  --vermelho:#E5544D; --vermelho-fundo:rgba(229,84,77,.13);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html{height:100%}
+body{
+  min-height:100%;
+  background:radial-gradient(1200px 500px at 50% -120px,#16301d 0%,var(--fundo) 55%) var(--fundo);
+  color:var(--giz);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+@keyframes girar{to{transform:rotate(360deg)}}
+@keyframes subir{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulsar{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.22em;color:var(--ouro)}
+.sec-title{font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--ouro);margin:0 0 10px}
+.suave{color:var(--giz-suave)} .apagado{color:var(--giz-apagado)}
+
+/* ---------- Cabeçalho ---------- */
+.hd{position:sticky;top:0;z-index:20;background:rgba(11,26,17,.88);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--borda)}
+.hd-in{display:flex;align-items:center;gap:10px;padding:12px 16px;max-width:560px;margin:0 auto}
+.hd-tit{flex:1;min-width:0}
+.hd-tit .eyebrow{font-size:9.5px;letter-spacing:.2em;display:flex;align-items:center;gap:6px}
+.hd-tit b{font-size:17px;font-weight:800;letter-spacing:-.01em;display:block}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--verde);display:inline-block}
+.dot.off{background:#d9a13b;animation:pulsar 1.2s ease infinite}
+.pill{display:flex;align-items:center;gap:7px;padding:5px 11px 5px 5px;border-radius:999px;
+  border:1px solid var(--borda);background:var(--card);font-size:13px;font-weight:700;max-width:140px}
+.pill span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- Componentes ---------- */
+.card{background:var(--card);border:1px solid var(--borda);border-radius:18px;padding:14px}
+.patch{width:34px;height:34px;border-radius:50%;background:var(--ouro-fundo);
+  border:1px solid rgba(244,200,75,.45);color:var(--ouro);display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:15px;flex-shrink:0}
+.patch.sm{width:28px;height:28px;font-size:12px}
+.avatar{border-radius:50%;color:#10160F;display:flex;align-items:center;justify-content:center;
+  font-weight:800;flex-shrink:0;border:2px solid rgba(242,239,230,.85);
+  box-shadow:inset 0 -2px 4px rgba(0,0,0,.25),0 1px 2px rgba(0,0,0,.4)}
+
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tbtn{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:12px 6px 10px;border-radius:14px;background:var(--card-alto);
+  border:1.5px solid var(--borda);min-height:74px;transition:border-color .15s,background .15s}
+.tbtn.sel{background:var(--ouro-fundo);border-color:var(--ouro)}
+.tbtn.sel2{background:rgba(185,194,204,.12);border-color:#B9C2CC}
+.tbtn .tflag{font-size:27px;line-height:1}
+.tbtn .tname{font-size:12.5px;font-weight:600;text-align:center;line-height:1.15}
+.tbtn .twin{position:absolute;top:5px;right:7px;font-size:13px}
+.tbtn .tcheck{position:absolute;top:5px;left:7px;font-size:10px;font-weight:800;color:var(--ouro)}
+.tbtn.sel2 .tcheck{color:#C9D2DC}
+
+.gcab{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.gcab b{font-weight:800;font-size:15px;display:block}
+.gcab small{font-size:12px;display:block}
+
+.btn{padding:15px;border-radius:14px;font-size:16px;font-weight:800;width:100%}
+.btn-gold{background:var(--ouro);color:#15240F}
+.btn-gold:disabled{background:rgba(244,200,75,.25);cursor:default}
+.icobtn{width:38px;height:38px;border-radius:12px;border:1px solid var(--borda);
+  background:var(--card);font-size:17px;display:flex;align-items:center;justify-content:center}
+
+.input{width:100%;padding:15px 16px;border-radius:14px;border:1.5px solid var(--borda);
+  background:var(--card);color:var(--giz);font-size:17px;outline:none}
+.input:focus{border-color:rgba(244,200,75,.6)}
+select.sel-camp{width:100%;padding:13px 14px;border-radius:12px;background:var(--card-alto);
+  border:1.5px solid var(--borda);font-size:15px;font-weight:600;-webkit-appearance:none;appearance:none}
+select.sel-camp.tem{border-color:var(--ouro)}
+select.sel-camp:not(.tem){color:var(--giz-apagado)}
+
+.chip{display:flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border-radius:999px;
+  font-size:12.5px;font-weight:600;background:var(--card-alto);border:1px solid var(--borda);
+  color:var(--giz-suave)}
+.chip.ok{background:var(--verde-fundo);border-color:rgba(52,199,123,.5);color:var(--verde)}
+.chip.bad{background:var(--vermelho-fundo);border-color:rgba(229,84,77,.45);color:var(--vermelho)}
+.chip .seg{display:flex;align-items:center;gap:3px}
+.chip .seg b{font-size:10px;font-weight:800;opacity:.75}
+.chip .seg.ok{color:var(--verde)}
+.chip .seg.bad{color:var(--vermelho)}
+.chip .sepd{opacity:.35}
+
+.rank{display:flex;align-items:center;gap:12px;background:var(--card);
+  border:1px solid var(--borda);border-radius:16px;padding:12px 14px}
+.rank.lider{background:var(--ouro-fundo);border-color:rgba(244,200,75,.4)}
+.rank .pos{width:26px;text-align:center;font-size:16px}
+.rank .pos i{font-style:normal;color:var(--giz-apagado);font-weight:700;font-size:14px}
+.rank .info{flex:1;min-width:0}
+.rank .info b{font-size:15px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank .info small{font-size:12px;color:var(--giz-suave)}
+.rank .pts{text-align:right}
+.rank .pts b{font-size:22px;font-weight:800;color:var(--ouro);font-variant-numeric:tabular-nums;line-height:1;display:block}
+.rank .pts small{font-size:10px;color:var(--giz-apagado);letter-spacing:.08em}
+
+.note{background:var(--card);border:1px dashed var(--borda);border-radius:14px;
+  padding:11px 14px;font-size:12.5px;color:var(--giz-suave);line-height:1.5}
+.aviso{background:var(--ouro-fundo);border:1px solid rgba(244,200,75,.35);border-radius:14px;
+  padding:12px 14px;font-size:13px;line-height:1.5}
+
+/* ---------- Barras fixas ---------- */
+.savebar{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 62px);
+  z-index:25;padding:0 12px;display:none}
+.savebar.on{display:block}
+.savebar-in{max-width:536px;margin:0 auto;background:rgba(20,42,27,.95);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--borda);border-radius:16px;padding:10px 12px;
+  display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.savebar-in .st{flex:1;font-size:12.5px;color:var(--giz-suave);line-height:1.3}
+.savebar-in button{padding:11px 18px;border-radius:12px;background:var(--ouro);
+  color:#15240F;font-size:14px;font-weight:800;white-space:nowrap}
+.savebar-in button:disabled{background:rgba(244,200,75,.25)}
+
+.toast{position:fixed;left:0;right:0;display:flex;justify-content:center;z-index:30;
+  pointer-events:none;bottom:calc(env(safe-area-inset-bottom,0px) + 74px);transition:bottom .2s}
+.toast.alto{bottom:calc(env(safe-area-inset-bottom,0px) + 132px)}
+.toast>div{background:#1E3D2B;border:1px solid rgba(52,199,123,.5);color:var(--giz);
+  padding:10px 18px;border-radius:999px;font-size:13.5px;font-weight:600;
+  box-shadow:0 8px 20px rgba(0,0,0,.45);animation:subir .25s ease}
+.toast.erro>div{background:var(--vermelho);border-color:rgba(255,255,255,.25)}
+
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(11,26,17,.92);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--borda);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabbar-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr}
+.tab{padding:9px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  color:var(--giz-apagado);border-top:2px solid transparent}
+.tab .ico{font-size:19px;filter:grayscale(.7)}
+.tab small{font-size:10.5px;font-weight:700;letter-spacing:.02em}
+.tab.on{color:var(--ouro);border-top-color:var(--ouro)}
+.tab.on .ico{filter:none}
+
+/* ---------- Setup / login ---------- */
+.centro{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+  padding-top:24px;padding-bottom:60px;animation:subir .4s ease}
+.h1{font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.05;margin:10px 0 12px}
+.lead{color:var(--giz-suave);font-size:15px;line-height:1.5;margin-bottom:28px}
+.lbl{font-size:13px;font-weight:600;color:var(--giz-suave);display:block;margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips .pill{cursor:pointer;max-width:none}
+
+.setup{padding-top:32px;padding-bottom:60px;animation:subir .4s ease}
+.setup h2{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:8px 0 6px}
+.setup .lead{margin-bottom:22px}
+.step{display:flex;gap:12px;margin-bottom:18px}
+.step .n{width:26px;height:26px;border-radius:50%;background:var(--ouro-fundo);
+  border:1px solid rgba(244,200,75,.45);color:var(--ouro);font-weight:800;font-size:13px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step .tx{font-size:14px;line-height:1.55;color:var(--giz)}
+.step .tx small{color:var(--giz-suave)}
+pre.code{background:#0d1f14;border:1px solid var(--borda);border-radius:12px;padding:12px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;
+  overflow-x:auto;margin:8px 0;color:#cfe8d6;white-space:pre}
+.copy{margin-top:6px;font-size:12px;font-weight:700;color:var(--ouro);
+  border:1px solid rgba(244,200,75,.45);border-radius:999px;padding:5px 12px}
+
+main{padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 150px);max-width:560px;margin:0 auto}
+.bloco{display:flex;flex-direction:column;gap:12px;animation:subir .3s ease}
+.gap8{display:flex;flex-direction:column;gap:8px}
+.linhachips{display:flex;flex-wrap:wrap;gap:6px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- ============================================================
+     PASSO ÚNICO DE CONFIGURAÇÃO (só o dono do bolão faz isso):
+     cole abaixo o firebaseConfig do seu projeto Firebase.
+     Instruções completas aparecem na própria página enquanto
+     esta config estiver vazia.
+     ============================================================ -->
+<script>
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC3GSfOB2FqGrMZDtPzMNzkKfKjap0F1HU",
+  authDomain: "bolao-da-copa-8be20.firebaseapp.com",
+  databaseURL: "https://bolao-da-copa-8be20-default-rtdb.firebaseio.com",
+  projectId: "bolao-da-copa-8be20",
+  storageBucket: "bolao-da-copa-8be20.firebasestorage.app",
+  messagingSenderId: "846351579597",
+  appId: "1:846351579597:web:072c37380726768f1e2c84"
+};
+</script>
+
+<script>
+/* Bootstrap: mostra a tela de configuração se a config estiver vazia,
+   e vigia o carregamento do Firebase quando ela estiver preenchida. */
+(function(){
+  var cfg = window.FIREBASE_CONFIG || {};
+  var faltando = !cfg.apiKey || cfg.apiKey === "COLE_AQUI" ||
+                 !cfg.databaseURL || cfg.databaseURL === "COLE_AQUI";
+  window.__CFG_OK = !faltando;
+
+  if (faltando) {
+    var rules = '{\n  "rules": {\n    "bolao": { ".read": true, ".write": true },\n    "$outro": { ".read": false, ".write": false }\n  }\n}';
+    document.getElementById('app').innerHTML =
+      '<div class="wrap setup">' +
+        '<div class="eyebrow">COPA DO MUNDO 2026 · CONFIGURA\u00C7\u00C3O</div>' +
+        '<h2>Falta s\u00F3 ligar o banco \u26BD</h2>' +
+        '<p class="lead">Este arquivo \u00E9 o bol\u00E3o completo. Pra todo mundo ver os palpites de todo mundo (sem criar conta nenhuma), ele usa o <b>Firebase Realtime Database</b>, gratuito. S\u00F3 voc\u00EA, dono do bol\u00E3o, faz os passos abaixo uma vez:</p>' +
+        '<div class="step"><div class="n">1</div><div class="tx">Acesse <b>console.firebase.google.com</b> e crie um projeto (pode desativar o Analytics).</div></div>' +
+        '<div class="step"><div class="n">2</div><div class="tx">No menu <b>Criar \u2192 Realtime Database</b>, clique em <b>Criar banco</b> (modo teste serve pra come\u00E7ar).</div></div>' +
+        '<div class="step"><div class="n">3</div><div class="tx">Na aba <b>Regras</b> do banco, cole isto e publique <small>(o modo teste expira em 30 dias \u2014 antes da final em 19/07!)</small>:' +
+          '<pre class="code" id="rls">' + rules + '</pre>' +
+          '<button class="copy" data-copy="rls">Copiar regras</button>' +
+        '</div></div>' +
+        '<div class="step"><div class="n">4</div><div class="tx">Em <b>Configura\u00E7\u00F5es do projeto \u2192 Seus apps</b>, registre um app <b>Web (&lt;/&gt;)</b> e copie o objeto <code>firebaseConfig</code>.</div></div>' +
+        '<div class="step"><div class="n">5</div><div class="tx">Abra este arquivo num editor e cole os valores na \u00E1rea marcada <b>FIREBASE_CONFIG</b>, no topo do c\u00F3digo. Confira se o <code>databaseURL</code> est\u00E1 l\u00E1 (se n\u00E3o vier no snippet, copie da p\u00E1gina do Realtime Database).</div></div>' +
+        '<div class="step"><div class="n">6</div><div class="tx">Hospede o arquivo (GitLab/GitHub Pages, bucket p\u00FAblico, Netlify\u2026) e mande o link no grupo da fam\u00EDlia. Pronto: ningu\u00E9m precisa de conta, \u00E9 s\u00F3 abrir no Safari. \uD83C\uDFC6</div></div>' +
+        '<div class="note">Dica: no iPhone, d\u00E1 pra usar \u201CAdicionar \u00E0 Tela de In\u00EDcio\u201D no Safari e o bol\u00E3o vira um \u201Capp\u201D com \u00EDcone.</div>' +
+      '</div>';
+    document.getElementById('app').addEventListener('click', function(e){
+      var b = e.target.closest('[data-copy]');
+      if (!b) return;
+      var el = document.getElementById(b.getAttribute('data-copy'));
+      if (navigator.clipboard && el) {
+        navigator.clipboard.writeText(el.textContent).then(function(){
+          b.textContent = 'Copiado \u2713';
+          setTimeout(function(){ b.textContent = 'Copiar regras'; }, 1800);
+        });
+      }
+    });
+  } else {
+    window.__WATCHDOG = setTimeout(function(){
+      if (window.__FB_OK) return;
+      document.getElementById('app').innerHTML =
+        '<div class="wrap centro" style="text-align:center">' +
+          '<div style="font-size:40px">\uD83D\uDCE1</div>' +
+          '<h2 style="font-size:22px;font-weight:800;margin:14px 0 8px">N\u00E3o consegui conectar ao banco</h2>' +
+          '<p class="lead" style="margin:0">Verifique a internet e a config do Firebase, e recarregue a p\u00E1gina.<br><br><small class="apagado">Se voc\u00EA est\u00E1 vendo isto na pr\u00E9via dentro do Claude, \u00E9 esperado: a pr\u00E9via bloqueia conex\u00F5es externas. Baixe o arquivo e abra hospedado que funciona.</small></p>' +
+        '</div>';
+    }, 9000);
+  }
+})();
+</script>
+
+<script type="module">
+/* ============================================================
+   BOLÃO DA FAMÍLIA — COPA 2026 (app principal)
+   Grupos oficiais, pós-repescagens de março/2026.
+   ============================================================ */
+if (window.__CFG_OK) {
+
+const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+const { getDatabase, ref, onValue, set } =
+  await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+
+const fb = initializeApp(window.FIREBASE_CONFIG);
+const db = getDatabase(fb);
+window.__FB_OK = true;
+clearTimeout(window.__WATCHDOG);
+
+/* ---------- Dados da Copa ---------- */
+const TIMES = {
+  MEX:["México","🇲🇽"], RSA:["África do Sul","🇿🇦"], KOR:["Coreia do Sul","🇰🇷"], CZE:["Tchéquia","🇨🇿"],
+  CAN:["Canadá","🇨🇦"], SUI:["Suíça","🇨🇭"], BIH:["Bósnia","🇧🇦"], QAT:["Catar","🇶🇦"],
+  BRA:["Brasil","🇧🇷"], MAR:["Marrocos","🇲🇦"], SCO:["Escócia","🏴󠁧󠁢󠁳󠁣󠁴󠁿"], HAI:["Haiti","🇭🇹"],
+  USA:["Estados Unidos","🇺🇸"], TUR:["Turquia","🇹🇷"], PAR:["Paraguai","🇵🇾"], AUS:["Austrália","🇦🇺"],
+  GER:["Alemanha","🇩🇪"], ECU:["Equador","🇪🇨"], CIV:["Costa do Marfim","🇨🇮"], CUW:["Curaçao","🇨🇼"],
+  NED:["Holanda","🇳🇱"], JPN:["Japão","🇯🇵"], SWE:["Suécia","🇸🇪"], TUN:["Tunísia","🇹🇳"],
+  BEL:["Bélgica","🇧🇪"], EGY:["Egito","🇪🇬"], IRN:["Irã","🇮🇷"], NZL:["Nova Zelândia","🇳🇿"],
+  ESP:["Espanha","🇪🇸"], URU:["Uruguai","🇺🇾"], KSA:["Arábia Saudita","🇸🇦"], CPV:["Cabo Verde","🇨🇻"],
+  FRA:["França","🇫🇷"], SEN:["Senegal","🇸🇳"], NOR:["Noruega","🇳🇴"], IRQ:["Iraque","🇮🇶"],
+  ARG:["Argentina","🇦🇷"], AUT:["Áustria","🇦🇹"], ALG:["Argélia","🇩🇿"], JOR:["Jordânia","🇯🇴"],
+  POR:["Portugal","🇵🇹"], COL:["Colômbia","🇨🇴"], UZB:["Uzbequistão","🇺🇿"], COD:["RD Congo","🇨🇩"],
+  ENG:["Inglaterra","🏴󠁧󠁢󠁥󠁮󠁧󠁿"], CRO:["Croácia","🇭🇷"], GHA:["Gana","🇬🇭"], PAN:["Panamá","🇵🇦"]
+};
+const nomeDe = id => TIMES[id][0];
+const flagDe = id => TIMES[id][1];
+
+const GRUPOS = [
+  ["A",["MEX","RSA","KOR","CZE"]], ["B",["CAN","SUI","BIH","QAT"]],
+  ["C",["BRA","MAR","SCO","HAI"]], ["D",["USA","TUR","PAR","AUS"]],
+  ["E",["GER","ECU","CIV","CUW"]], ["F",["NED","JPN","SWE","TUN"]],
+  ["G",["BEL","EGY","IRN","NZL"]], ["H",["ESP","URU","KSA","CPV"]],
+  ["I",["FRA","SEN","NOR","IRQ"]], ["J",["ARG","AUT","ALG","JOR"]],
+  ["K",["POR","COL","UZB","COD"]], ["L",["ENG","CRO","GHA","PAN"]]
+];
+
+const CORES_AVATAR = ["#F4C84B","#34C77B","#5AA9E6","#E5544D","#B07CF0","#F08A4B"];
+
+/* ---------- Helpers ---------- */
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const slug = n => n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+  .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+const iniciais = n => {
+  const p = n.trim().split(/\s+/);
+  return (p.length > 1 ? p[0][0]+p[1][0] : n.slice(0,2)).toUpperCase();
+};
+const corAvatar = n => {
+  let h = 0; for (const c of n) h += c.charCodeAt(0);
+  return CORES_AVATAR[h % CORES_AVATAR.length];
+};
+const horaAgora = () =>
+  new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+const normPick = v => typeof v === "string" ? { p1: v, p2: null } : (v || {});
+const normTodos = p => { const o = {}; for (const k in (p || {})) o[k] = normPick(p[k]); return o; };
+function alternar(sel, t) {
+  const s = normPick(sel);
+  if (s.p1 === t) return { ...s, p1: null };
+  if (s.p2 === t) return { ...s, p2: null };
+  if (!s.p1) return { ...s, p1: t };
+  if (!s.p2) return { ...s, p2: t };
+  return { ...s, p2: t };
+}
+const avatarHtml = (n,t) => {
+  const cor = corAvatar(n);
+  return `<span class="avatar" style="width:${t}px;height:${t}px;font-size:${Math.round(t*.38)}px;` +
+    `background:linear-gradient(160deg,${cor},${cor}99)">${esc(iniciais(n))}</span>`;
+};
+
+/* ---------- Estado ---------- */
+const S = {
+  nome: localStorage.getItem("copa26:nome") || null,
+  aba: "palpites",
+  palpites: {}, campeao: null, sujo: false, salvoAs: null, salvando: false,
+  jogadores: [], resultados: { grupos:{}, campeao:null },
+  resTemp: { grupos:{}, campeao:null }, resSujo: false, salvandoRes: false,
+  conectado: true, pronto: false
+};
+
+/* ---------- Firebase: tempo real ---------- */
+onValue(ref(db, "bolao/jogadores"), snap => {
+  const v = snap.val() || {};
+  S.jogadores = Object.values(v).filter(j => j && j.nome)
+    .sort((a,b) => a.nome.localeCompare(b.nome,"pt-BR"));
+  if (S.nome && !S.sujo) {
+    const meu = S.jogadores.find(j => slug(j.nome) === slug(S.nome));
+    if (meu) { S.palpites = normTodos(meu.palpites); S.campeao = meu.campeao || null; }
+  }
+  S.pronto = true; render();
+});
+onValue(ref(db, "bolao/resultados"), snap => {
+  const v = snap.val() || {};
+  S.resultados = { grupos: normTodos(v.grupos), campeao: v.campeao || null };
+  if (!S.resSujo) S.resTemp = { grupos: {...S.resultados.grupos}, campeao: S.resultados.campeao };
+  render();
+});
+onValue(ref(db, ".info/connected"), snap => {
+  S.conectado = snap.val() === true; render();
+});
+
+/* ---------- Pontuação ---------- */
+function calcPontos(j, res) {
+  let pts = 0, acertos = 0, definidos = 0, preenchidos = 0;
+  for (const [letra] of GRUPOS) {
+    const real = normPick(res.grupos[letra]);
+    const meu = normPick(j.palpites && j.palpites[letra]);
+    if (real.p1) { definidos++; if (meu.p1 === real.p1) { pts += 2; acertos++; } }
+    if (real.p2) { definidos++; if (meu.p2 === real.p2) { pts += 1; acertos++; } }
+    if (meu.p1) preenchidos++;
+    if (meu.p2) preenchidos++;
+  }
+  const bonus = res.campeao && j.campeao === res.campeao ? 5 : 0;
+  if (j.campeao) preenchidos++;
+  return { acertos, definidos, bonus, pts: pts + bonus, preenchidos };
+}
+
+/* ---------- Ações ---------- */
+let toastTimer = null;
+function avisar(msg, tipo) {
+  const t = $("#toast");
+  if (!t) return;
+  t.className = "toast" + (tipo === "erro" ? " erro" : "") +
+    (precisaSavebar() ? " alto" : "");
+  t.innerHTML = "<div>" + esc(msg) + "</div>";
+  t.style.display = "flex";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = "none"; }, 2600);
+}
+
+function entrar(n) {
+  const limpo = n.trim();
+  if (!limpo) return;
+  S.nome = limpo;
+  localStorage.setItem("copa26:nome", limpo);
+  const meu = S.jogadores.find(j => slug(j.nome) === slug(limpo));
+  S.palpites = meu ? normTodos(meu.palpites) : {};
+  S.campeao = meu ? meu.campeao || null : null;
+  S.sujo = false; S.salvoAs = null; S.aba = "palpites";
+  render();
+}
+
+async function salvarPalpites() {
+  if (!S.nome || S.salvando) return;
+  S.salvando = true; render();
+  let msg = "Palpites salvos pra família toda ⚽", tipo = "";
+  try {
+    await set(ref(db, "bolao/jogadores/" + slug(S.nome)),
+      { nome: S.nome, palpites: S.palpites, campeao: S.campeao, ts: Date.now() });
+    S.sujo = false; S.salvoAs = horaAgora();
+  } catch (e) {
+    msg = "Não consegui salvar. Tenta de novo."; tipo = "erro";
+  }
+  S.salvando = false; render(); avisar(msg, tipo);
+}
+
+async function salvarResultados() {
+  if (S.salvandoRes) return;
+  S.salvandoRes = true; render();
+  let msg = "Resultados oficiais atualizados 🏆", tipo = "";
+  try {
+    await set(ref(db, "bolao/resultados"),
+      { grupos: S.resTemp.grupos, campeao: S.resTemp.campeao, ts: Date.now() });
+    S.resSujo = false;
+  } catch (e) {
+    msg = "Não consegui salvar os resultados."; tipo = "erro";
+  }
+  S.salvandoRes = false; render(); avisar(msg, tipo);
+}
+
+function precisaSavebar() {
+  return (S.aba === "palpites" && S.nome && (S.sujo || S.salvoAs)) ||
+         (S.aba === "resultados" && S.resSujo);
+}
+
+/* ---------- Pedaços de HTML ---------- */
+function htmlBotaoTime(id, pos, vencedor, acao, letra) {
+  const cls = pos === "1" ? " sel" : pos === "2" ? " sel2" : "";
+  return `<button class="tbtn${cls}" data-acao="${acao}" data-g="${letra}" data-t="${id}">` +
+    (vencedor ? `<span class="twin">🏆</span>` : "") +
+    (pos ? `<span class="tcheck">${pos}º</span>` : "") +
+    `<span class="tflag">${flagDe(id)}</span>` +
+    `<span class="tname">${esc(nomeDe(id))}</span></button>`;
+}
+
+function htmlCardGrupo(letra, times, escolha, real, acao) {
+  const e = normPick(escolha), r = normPick(real);
+  const sub = r.p1
+    ? `<small style="color:var(--verde);font-weight:600">1º ${flagDe(r.p1)} ${esc(nomeDe(r.p1))}${r.p2 ? ` · 2º ${flagDe(r.p2)} ${esc(nomeDe(r.p2))}` : ""}</small>`
+    : `<small class="apagado">Quem fica em 1º e 2º?</small>`;
+  return `<div class="card"><div class="gcab"><span class="patch">${letra}</span>` +
+    `<div><b>Grupo ${letra}</b>${sub}</div></div><div class="tgrid">` +
+    times.map(id => {
+      const pos = e.p1 === id ? "1" : e.p2 === id ? "2" : null;
+      return htmlBotaoTime(id, pos, r.p1 === id, acao, letra);
+    }).join("") +
+    `</div></div>`;
+}
+
+function htmlSeletorCampeao(valor, acao, rotulo) {
+  const ops = GRUPOS.map(([l, ts]) =>
+    `<optgroup label="Grupo ${l}">` +
+    ts.map(id => `<option value="${id}"${valor === id ? " selected" : ""}>${flagDe(id)} ${esc(nomeDe(id))}</option>`).join("") +
+    `</optgroup>`).join("");
+  return `<div class="card" style="border-color:rgba(244,200,75,.35)">` +
+    `<div class="gcab"><span class="patch" style="font-size:16px">🏆</span>` +
+    `<div><b>${rotulo}</b><small style="color:var(--ouro);font-weight:600">Vale +5 pontos</small></div></div>` +
+    `<select class="sel-camp${valor ? " tem" : ""}" data-acao="${acao}">` +
+    `<option value="">— escolher seleção —</option>${ops}</select></div>`;
+}
+
+function htmlChip(j, pick, real) {
+  const certo = real && pick === real;
+  const errado = real && pick && pick !== real;
+  const cls = certo ? " ok" : errado ? " bad" : "";
+  const tx = pick ? `${flagDe(pick)}</span><span>${esc(nomeDe(pick))}` : `—</span><span>sem palpite`;
+  return `<span class="chip${cls}">${avatarHtml(j.nome,18)}<span>${tx}</span></span>`;
+}
+
+function htmlChipDuplo(j, meu, real) {
+  const cls1 = real.p1 && meu.p1 ? (meu.p1 === real.p1 ? " ok" : " bad") : "";
+  const cls2 = real.p2 && meu.p2 ? (meu.p2 === real.p2 ? " ok" : " bad") : "";
+  return `<span class="chip">${avatarHtml(j.nome, 18)}` +
+    `<span class="seg${cls1}"><b>1º</b>${meu.p1 ? flagDe(meu.p1) : "—"}</span>` +
+    `<span class="sepd">·</span>` +
+    `<span class="seg${cls2}"><b>2º</b>${meu.p2 ? flagDe(meu.p2) : "—"}</span></span>`;
+}
+
+/* ---------- Telas ---------- */
+function telaLogin() {
+  const chips = S.jogadores.length
+    ? `<div style="margin-top:28px"><div class="apagado" style="font-size:12px;margin-bottom:10px">Ou continue como:</div>` +
+      `<div class="chips">` + S.jogadores.map(j =>
+        `<button class="pill" data-acao="chip" data-nome="${esc(j.nome)}">${avatarHtml(j.nome,26)}<span>${esc(j.nome)}</span></button>`
+      ).join("") + `</div></div>`
+    : "";
+  return `<div class="wrap centro">` +
+    `<div class="eyebrow">COPA DO MUNDO 2026</div>` +
+    `<h1 class="h1">Bolão da<br>Família</h1>` +
+    `<p class="lead">Palpite o 1º e o 2º colocado de cada um dos 12 grupos, escolha o campeão do mundo e dispute o placar com a galera.</p>` +
+    `<label class="lbl">Seu nome</label>` +
+    `<input id="inome" class="input" placeholder="Ex.: Chris" autocomplete="name" style="margin-bottom:12px">` +
+    `<button class="btn btn-gold" data-acao="entrar">Entrar no bolão</button>` +
+    chips +
+    `<div class="apagado" style="margin-top:32px;font-size:12px;line-height:1.5">🔓 Palpites e resultados ficam visíveis pra todo mundo que tiver o link.</div>` +
+    `</div>`;
+}
+
+function abaPalpites() {
+  return `<div class="bloco">` +
+    `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Toque na seleção que fica em <b>1º</b> e depois na que fica em <b>2º</b> de cada grupo (toque de novo pra desmarcar). Acertar o 1º vale 2 pts; o 2º, 1 pt. Dá pra mudar até a última rodada (27/06).</div>` +
+    GRUPOS.map(([l, ts]) => htmlCardGrupo(l, ts, S.palpites[l], S.resultados.grupos[l], "pick")).join("") +
+    htmlSeletorCampeao(S.campeao, "campeao", "Campeão do mundo") +
+    `</div>`;
+}
+
+function abaPlacar() {
+  const ranking = S.jogadores
+    .map(j => ({ ...j, p: calcPontos(j, S.resultados) }))
+    .sort((a,b) => b.p.pts - a.p.pts || b.p.acertos - a.p.acertos ||
+      b.p.preenchidos - a.p.preenchidos || a.nome.localeCompare(b.nome,"pt-BR"));
+  const temRes = Object.keys(S.resultados.grupos).length > 0 || !!S.resultados.campeao;
+  const medalhas = ["🥇","🥈","🥉"];
+
+  const linhas = ranking.length === 0
+    ? `<div class="card" style="text-align:center;color:var(--giz-apagado);font-size:14px;padding:18px">Ninguém palpitou ainda. Seja o primeiro! 🎯</div>`
+    : ranking.map((j,i) =>
+      `<div class="rank${i === 0 && temRes ? " lider" : ""}">` +
+      `<span class="pos">${temRes && i < 3 ? medalhas[i] : `<i>${i+1}º</i>`}</span>` +
+      avatarHtml(j.nome,36) +
+      `<span class="info"><b>${esc(j.nome)}</b><small>${
+        temRes
+          ? `${j.p.acertos} de ${j.p.definidos} posições${j.p.bonus ? " · campeão ✓" : ""}`
+          : `${j.p.preenchidos}/25 palpites feitos`
+      }</small></span>` +
+      `<span class="pts"><b>${j.p.pts}</b><small>PTS</small></span></div>`
+    ).join("");
+
+  const grupos = GRUPOS.map(([l]) => {
+    const realN = normPick(S.resultados.grupos[l]);
+    const temR = !!(realN.p1 || realN.p2);
+    const cab = temR
+      ? `<span style="color:var(--verde)">🏆 1º ${realN.p1 ? `${flagDe(realN.p1)} ${esc(nomeDe(realN.p1))}` : "—"}` +
+        (realN.p2 ? `<span style="opacity:.8"> · 2º ${flagDe(realN.p2)} ${esc(nomeDe(realN.p2))}</span>` : "") + `</span>`
+      : `<span class="apagado" style="font-weight:600">Em disputa</span>`;
+    const chips = S.jogadores.length
+      ? S.jogadores.map(j => htmlChipDuplo(j, normPick(j.palpites && j.palpites[l]), realN)).join("")
+      : `<span class="apagado" style="font-size:12px">Sem palpites por enquanto.</span>`;
+    return `<div class="card" style="padding:12px 14px">` +
+      `<div class="gcab" style="margin-bottom:${S.jogadores.length ? 10 : 0}px">` +
+      `<span class="patch sm">${l}</span><div style="font-size:13px;font-weight:700;flex:1">${cab}</div></div>` +
+      `<div class="linhachips">${chips}</div></div>`;
+  }).join("");
+
+  const realC = S.resultados.campeao;
+  const cabC = realC
+    ? `<span style="color:var(--verde)">Campeão: ${flagDe(realC)} ${esc(nomeDe(realC))}</span>`
+    : `<span class="apagado" style="font-weight:600">Campeão do mundo · final em 19/07</span>`;
+  const chipsC = S.jogadores.length
+    ? S.jogadores.map(j => htmlChip(j, j.campeao, realC)).join("")
+    : `<span class="apagado" style="font-size:12px">Sem palpites por enquanto.</span>`;
+  const cardC = `<div class="card" style="padding:12px 14px;border-color:rgba(244,200,75,.3)">` +
+    `<div class="gcab" style="margin-bottom:${S.jogadores.length ? 10 : 0}px">` +
+    `<span class="patch sm" style="font-size:13px">🏆</span>` +
+    `<div style="font-size:13px;font-weight:700;flex:1">${cabC}</div></div>` +
+    `<div class="linhachips">${chipsC}</div></div>`;
+
+  return `<div class="bloco" style="gap:22px">` +
+    `<section><div class="sec-title">CLASSIFICAÇÃO</div>` +
+    (!temRes ? `<div class="note" style="margin-bottom:10px">Os pontos aparecem quando os resultados forem marcados na aba <b>Resultados</b>. 1º colocado certo vale 2 pontos, 2º vale 1 e o campeão do mundo vale 5.</div>` : "") +
+    `<div class="gap8">${linhas}</div></section>` +
+    `<section><div class="sec-title">PALPITES POR GRUPO</div>` +
+    `<div class="gap8">${grupos}${cardC}</div></section></div>`;
+}
+
+function abaResultados() {
+  return `<div class="bloco">` +
+    `<div class="aviso">⚠️ Aqui se marca o <b>resultado oficial</b> conforme os grupos forem terminando. Isso vale pra família inteira e define a pontuação de todo mundo.</div>` +
+    GRUPOS.map(([l, ts]) => htmlCardGrupo(l, ts, S.resTemp.grupos[l], null, "respick")).join("") +
+    htmlSeletorCampeao(S.resTemp.campeao, "rescampeao", "Campeão do mundo (oficial)") +
+    `</div>`;
+}
+
+/* ---------- Render ---------- */
+function render() {
+  const app = $("#app");
+  if (!S.pronto) {
+    app.innerHTML = `<div class="wrap centro" style="align-items:center;text-align:center">` +
+      `<div style="font-size:40px;animation:girar 1.6s linear infinite">⚽</div>` +
+      `<div class="suave" style="margin-top:12px;font-size:14px">Aquecendo no gramado…</div></div>`;
+    return;
+  }
+  if (!S.nome) {
+    const vNome = $("#inome") ? $("#inome").value : "";
+    app.innerHTML = telaLogin();
+    const i = $("#inome");
+    if (i && vNome) i.value = vNome;
+    return;
+  }
+
+  const y = window.scrollY;
+  const conteudo =
+    S.aba === "palpites" ? abaPalpites() :
+    S.aba === "placar" ? abaPlacar() : abaResultados();
+
+  const stSave = S.aba === "palpites"
+    ? (S.sujo
+        ? `Alterações não salvas · ${calcPontos({palpites:S.palpites,campeao:S.campeao},S.resultados).preenchidos}/25`
+        : `Salvo às ${S.salvoAs} ✓`)
+    : "Resultados alterados";
+  const btSave = S.aba === "palpites"
+    ? (S.salvando ? "Salvando…" : "Salvar palpites")
+    : (S.salvandoRes ? "Salvando…" : "Salvar resultados");
+  const btDis = S.aba === "palpites" ? (S.salvando || !S.sujo) : (S.salvandoRes || !S.resSujo);
+
+  const tabs = [["palpites","Palpites","✏️"],["placar","Placar","🏆"],["resultados","Resultados","📋"]];
+
+  app.innerHTML =
+    `<header class="hd"><div class="hd-in">` +
+      `<div class="hd-tit"><span class="eyebrow"><span class="dot${S.conectado ? "" : " off"}"></span>COPA 2026 ${S.conectado ? "· AO VIVO" : "· RECONECTANDO…"}</span>` +
+      `<b>Bolão da Família</b></div>` +
+      `<button class="pill" data-acao="trocar" title="Trocar de pessoa">${avatarHtml(S.nome,26)}<span>${esc(S.nome.split(" ")[0])}</span></button>` +
+    `</div></header>` +
+    `<main>${conteudo}</main>` +
+    `<div class="savebar${precisaSavebar() ? " on" : ""}"><div class="savebar-in">` +
+      `<span class="st">${stSave}</span>` +
+      `<button data-acao="${S.aba === "palpites" ? "salvar" : "salvarres"}"${btDis ? " disabled" : ""}>${btSave}</button>` +
+    `</div></div>` +
+    `<div id="toast" class="toast" style="display:none"></div>` +
+    `<nav class="tabbar"><div class="tabbar-in">` +
+      tabs.map(([id, rot, ico]) =>
+        `<button class="tab${S.aba === id ? " on" : ""}" data-acao="aba" data-aba="${id}">` +
+        `<span class="ico">${ico}</span><small>${rot}</small></button>`).join("") +
+    `</div></nav>`;
+
+  window.scrollTo(0, y);
+}
+
+/* ---------- Eventos (delegação) ---------- */
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-acao]");
+  if (!el) return;
+  const a = el.getAttribute("data-acao");
+
+  if (a === "entrar") { const i = $("#inome"); entrar(i ? i.value : ""); }
+  if (a === "chip") entrar(el.getAttribute("data-nome"));
+  if (a === "trocar") { S.nome = null; S.sujo = false; render(); }
+  if (a === "aba") { S.aba = el.getAttribute("data-aba"); render(); }
+  if (a === "salvar") salvarPalpites();
+  if (a === "salvarres") salvarResultados();
+
+  if (a === "pick") {
+    const g = el.getAttribute("data-g"), t = el.getAttribute("data-t");
+    S.palpites[g] = alternar(S.palpites[g], t);
+    S.sujo = true; render();
+  }
+  if (a === "respick") {
+    const g = el.getAttribute("data-g"), t = el.getAttribute("data-t");
+    S.resTemp.grupos[g] = alternar(S.resTemp.grupos[g], t);
+    S.resSujo = true; render();
+  }
+});
+
+document.addEventListener("change", e => {
+  const el = e.target.closest("[data-acao]");
+  if (!el) return;
+  const a = el.getAttribute("data-acao");
+  if (a === "campeao") { S.campeao = el.value || null; S.sujo = true; render(); }
+  if (a === "rescampeao") { S.resTemp.campeao = el.value || null; S.resSujo = true; render(); }
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target && e.target.id === "inome") entrar(e.target.value);
+});
+
+render();
+}
+</script>
+</body>
+</html>
