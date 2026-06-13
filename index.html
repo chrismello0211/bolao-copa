@@ -563,7 +563,7 @@ function entrar(n) {
 async function salvarPalpites(travar) {
   if (!S.nome || S.salvando || S.travado) return;
   S.salvando = true; render();
-  let msg = "Palpites enviados e travados! Agora é torcer 🍀", tipo = "";
+  let msg = "Palpites enviados e travados! Agora é torcer ⚽", tipo = "";
   try {
     const agora = Date.now();
     await set(ref(db, "bolao/jogadores/" + slug(S.nome)),
@@ -696,7 +696,7 @@ function abaPalpites() {
   const trava = S.travado;
   const preench = calcPontos({ palpites: S.palpites, campeao: S.campeao }, S.resultados).preenchidos;
   const topo = trava
-    ? `<div class="lockband">🔒 <b>Palpites enviados${S.travadoEm ? " em " + new Date(S.travadoEm).toLocaleDateString("pt-BR") : ""}.</b> Estão travados — não dá mais pra trocar. Agora é torcer! 🍀</div>`
+    ? `<div class="lockband">🔒 <b>Palpites enviados${S.travadoEm ? " em " + new Date(S.travadoEm).toLocaleDateString("pt-BR") : ""}.</b> Estão travados — não dá mais pra trocar. Agora é torcer! ⚽</div>`
     : `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Toque na seleção de <b>1º</b> e depois na de <b>2º</b> de cada grupo (toque de novo desmarca). Acertar o 1º vale 3 pts; o 2º, 2 pts. Vai salvando sozinho no teu celular — quando completar os 25, <b>envia</b> lá no fim.</div>`;
   const enviar = trava ? "" :
     `<div class="card" style="border-color:rgba(244,200,75,.35)">` +
