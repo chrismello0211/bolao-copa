@@ -145,7 +145,7 @@ select.sel-camp:not(.tem){color:var(--giz-apagado)}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(11,26,17,.92);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border-top:1px solid var(--borda);padding-bottom:env(safe-area-inset-bottom,0px)}
-.tabbar-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr}
+.tabbar-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
 .tab{padding:9px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;
   color:var(--giz-apagado);border-top:2px solid transparent}
 .tab .ico{font-size:19px;filter:grayscale(.7)}
@@ -181,6 +181,37 @@ main{padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 150px);max-width:5
 .bloco{display:flex;flex-direction:column;gap:12px;animation:subir .3s ease}
 .gap8{display:flex;flex-direction:column;gap:8px}
 .linhachips{display:flex;flex-wrap:wrap;gap:6px}
+
+/* ---------- Aba Brasil ---------- */
+.jbr-cab{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--giz-suave)}
+.placarrow{display:flex;align-items:center;justify-content:center;gap:10px}
+.ptime{display:flex;flex-direction:column;align-items:center;gap:4px;width:96px}
+.ptime .pflag{font-size:34px;line-height:1}
+.ptime .pnome{font-size:12px;font-weight:700;text-align:center;line-height:1.15}
+.pgol{width:54px;height:54px;border-radius:14px;background:var(--card-alto);border:1.5px solid var(--borda);
+  color:var(--giz);font-size:24px;font-weight:800;text-align:center;outline:none;-moz-appearance:textfield}
+.pgol:focus{border-color:var(--ouro)}
+.px{font-size:14px;color:var(--giz-apagado);font-weight:700}
+.resband{margin-top:12px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;
+  padding:6px;border-radius:10px}
+.resband.v{background:var(--verde-fundo);color:var(--verde)}
+.resband.e{background:var(--ouro-fundo);color:var(--ouro)}
+.resband.d{background:var(--vermelho-fundo);color:var(--vermelho)}
+.resband.aj{background:var(--card-alto);color:var(--giz-apagado)}
+.xdel{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;
+  background:var(--card-alto);border:1px solid var(--borda);color:var(--giz-apagado);font-size:12px}
+.addrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.inputsm{padding:11px 12px;border-radius:12px;border:1.5px solid var(--borda);background:var(--card-alto);
+  color:var(--giz);font-size:14px;outline:none;width:100%;-webkit-appearance:none;appearance:none}
+
+/* ---------- Palpites cravados ---------- */
+.tbtn:disabled{cursor:default}
+.tbtn:disabled:not(.sel):not(.sel2){opacity:.45}
+select.sel-camp:disabled{opacity:.7}
+.lockband{background:var(--card);border:1px solid rgba(52,199,123,.35);border-radius:14px;
+  padding:12px 14px;font-size:13px;line-height:1.5}
+.btn-lock{background:transparent;border:1.5px solid rgba(244,200,75,.5);color:var(--ouro);font-size:14px;padding:13px}
+.btn-lock:disabled{opacity:.4}
 </style>
 </head>
 <body>
@@ -301,6 +332,13 @@ const GRUPOS = [
 
 const CORES_AVATAR = ["#F4C84B","#34C77B","#5AA9E6","#E5544D","#B07CF0","#F08A4B"];
 
+const JOGOS_BR_FIXOS = [
+  { id: "g1", ordem: 1, fase: "Grupo C · Rodada 1", adv: "MAR", data: "Sáb 13/06 · 19h", local: "MetLife Stadium · Nova Jersey" },
+  { id: "g2", ordem: 2, fase: "Grupo C · Rodada 2", adv: "HAI", data: "Sex 19/06 · 21h30", local: "Lincoln Financial Field · Filadélfia" },
+  { id: "g3", ordem: 3, fase: "Grupo C · Rodada 3", adv: "SCO", data: "Qua 24/06 · 19h", local: "Hard Rock Stadium · Miami" }
+];
+const FASES_MM = ["16 avos de final", "Oitavas de final", "Quartas de final", "Semifinal", "Disputa de 3º lugar", "Final"];
+
 /* ---------- Helpers ---------- */
 const $ = sel => document.querySelector(sel);
 const esc = s => String(s).replace(/[&<>"']/g, c =>
@@ -338,8 +376,10 @@ const S = {
   nome: localStorage.getItem("copa26:nome") || null,
   aba: "palpites",
   palpites: {}, campeao: null, sujo: false, salvoAs: null, salvando: false,
+  travado: false, travadoEm: null,
   jogadores: [], resultados: { grupos:{}, campeao:null },
   resTemp: { grupos:{}, campeao:null }, resSujo: false, salvandoRes: false,
+  brasil: {}, brTemp: {}, brSujo: false, salvandoBr: false, brForm: false,
   conectado: true, pronto: false
 };
 
@@ -348,21 +388,46 @@ onValue(ref(db, "bolao/jogadores"), snap => {
   const v = snap.val() || {};
   S.jogadores = Object.values(v).filter(j => j && j.nome)
     .sort((a,b) => a.nome.localeCompare(b.nome,"pt-BR"));
-  if (S.nome && !S.sujo) {
+  if (S.nome) {
     const meu = S.jogadores.find(j => slug(j.nome) === slug(S.nome));
-    if (meu) { S.palpites = normTodos(meu.palpites); S.campeao = meu.campeao || null; }
+    if (meu && meu.travado) {
+      S.travado = true; S.travadoEm = meu.travadoEm || null;
+      S.palpites = normTodos(meu.palpites); S.campeao = meu.campeao || null; S.sujo = false;
+    } else if (meu && !S.sujo) {
+      S.palpites = normTodos(meu.palpites); S.campeao = meu.campeao || null;
+      S.travado = false; S.travadoEm = null;
+    }
   }
-  S.pronto = true; render();
+  S.pronto = true; renderSeguro();
 });
 onValue(ref(db, "bolao/resultados"), snap => {
   const v = snap.val() || {};
   S.resultados = { grupos: normTodos(v.grupos), campeao: v.campeao || null };
   if (!S.resSujo) S.resTemp = { grupos: {...S.resultados.grupos}, campeao: S.resultados.campeao };
-  render();
+  renderSeguro();
+});
+onValue(ref(db, "bolao/brasil/jogos"), snap => {
+  S.brasil = snap.val() || {};
+  if (!S.brSujo) S.brTemp = montarBrTemp();
+  renderSeguro();
 });
 onValue(ref(db, ".info/connected"), snap => {
-  S.conectado = snap.val() === true; render();
+  S.conectado = snap.val() === true; renderSeguro();
 });
+
+function montarBrTemp() {
+  const dbj = S.brasil || {};
+  const m = {};
+  for (const f of JOGOS_BR_FIXOS) m[f.id] = { ...f, ...(dbj[f.id] || {}), id: f.id, fixo: true };
+  for (const k in dbj) if (!m[k]) m[k] = { ...dbj[k], id: k, fixo: false };
+  return m;
+}
+
+function renderSeguro() {
+  const f = document.activeElement;
+  if (f && f.classList && f.classList.contains("pgol")) { pintarSavebar(); return; }
+  render();
+}
 
 /* ---------- Pontuação ---------- */
 function calcPontos(j, res) {
@@ -401,20 +466,27 @@ function entrar(n) {
   const meu = S.jogadores.find(j => slug(j.nome) === slug(limpo));
   S.palpites = meu ? normTodos(meu.palpites) : {};
   S.campeao = meu ? meu.campeao || null : null;
+  S.travado = meu ? !!meu.travado : false;
+  S.travadoEm = meu ? meu.travadoEm || null : null;
   S.sujo = false; S.salvoAs = null; S.aba = "palpites";
   render();
 }
 
-async function salvarPalpites() {
+async function salvarPalpites(travar) {
   if (!S.nome || S.salvando) return;
+  if (S.travado && !travar) return;
   S.salvando = true; render();
-  let msg = "Palpites salvos pra família toda ⚽", tipo = "";
+  let msg = travar ? "Palpites cravados! Agora é torcer 🍀" : "Palpites salvos pra família toda ⚽", tipo = "";
   try {
+    const agora = Date.now();
     await set(ref(db, "bolao/jogadores/" + slug(S.nome)),
-      { nome: S.nome, palpites: S.palpites, campeao: S.campeao, ts: Date.now() });
+      { nome: S.nome, palpites: S.palpites, campeao: S.campeao, ts: agora,
+        travado: travar ? true : !!S.travado,
+        travadoEm: travar ? agora : (S.travadoEm || null) });
     S.sujo = false; S.salvoAs = horaAgora();
+    if (travar) { S.travado = true; S.travadoEm = agora; }
   } catch (e) {
-    msg = "Não consegui salvar. Tenta de novo."; tipo = "erro";
+    msg = travar ? "Não consegui cravar. Tenta de novo." : "Não consegui salvar. Tenta de novo."; tipo = "erro";
   }
   S.salvando = false; render(); avisar(msg, tipo);
 }
@@ -433,22 +505,43 @@ async function salvarResultados() {
   S.salvandoRes = false; render(); avisar(msg, tipo);
 }
 
+async function salvarBrasil() {
+  if (S.salvandoBr) return;
+  S.salvandoBr = true; pintarSavebar();
+  let msg = "Placar do Brasil atualizado 🇧🇷", tipo = "";
+  try {
+    const out = {};
+    for (const [id, j] of Object.entries(S.brTemp)) {
+      out[id] = { ordem: j.ordem || 0, fase: j.fase || "", adv: j.adv || null,
+        data: j.data || "", local: j.local || "",
+        b: (j.b === "" || j.b === undefined) ? null : j.b,
+        a: (j.a === "" || j.a === undefined) ? null : j.a };
+    }
+    await set(ref(db, "bolao/brasil/jogos"), out);
+    S.brSujo = false;
+  } catch (e) {
+    msg = "Não consegui salvar o placar."; tipo = "erro";
+  }
+  S.salvandoBr = false; render(); avisar(msg, tipo);
+}
+
 function precisaSavebar() {
-  return (S.aba === "palpites" && S.nome && (S.sujo || S.salvoAs)) ||
-         (S.aba === "resultados" && S.resSujo);
+  return (S.aba === "palpites" && S.nome && !S.travado && (S.sujo || S.salvoAs)) ||
+         (S.aba === "resultados" && S.resSujo) ||
+         (S.aba === "brasil" && S.brSujo);
 }
 
 /* ---------- Pedaços de HTML ---------- */
-function htmlBotaoTime(id, pos, vencedor, acao, letra) {
+function htmlBotaoTime(id, pos, vencedor, acao, letra, trava) {
   const cls = pos === "1" ? " sel" : pos === "2" ? " sel2" : "";
-  return `<button class="tbtn${cls}" data-acao="${acao}" data-g="${letra}" data-t="${id}">` +
+  return `<button class="tbtn${cls}" data-acao="${acao}" data-g="${letra}" data-t="${id}"${trava ? " disabled" : ""}>` +
     (vencedor ? `<span class="twin">🏆</span>` : "") +
     (pos ? `<span class="tcheck">${pos}º</span>` : "") +
     `<span class="tflag">${flagDe(id)}</span>` +
     `<span class="tname">${esc(nomeDe(id))}</span></button>`;
 }
 
-function htmlCardGrupo(letra, times, escolha, real, acao) {
+function htmlCardGrupo(letra, times, escolha, real, acao, trava) {
   const e = normPick(escolha), r = normPick(real);
   const sub = r.p1
     ? `<small style="color:var(--verde);font-weight:600">1º ${flagDe(r.p1)} ${esc(nomeDe(r.p1))}${r.p2 ? ` · 2º ${flagDe(r.p2)} ${esc(nomeDe(r.p2))}` : ""}</small>`
@@ -457,12 +550,12 @@ function htmlCardGrupo(letra, times, escolha, real, acao) {
     `<div><b>Grupo ${letra}</b>${sub}</div></div><div class="tgrid">` +
     times.map(id => {
       const pos = e.p1 === id ? "1" : e.p2 === id ? "2" : null;
-      return htmlBotaoTime(id, pos, r.p1 === id, acao, letra);
+      return htmlBotaoTime(id, pos, r.p1 === id, acao, letra, trava);
     }).join("") +
     `</div></div>`;
 }
 
-function htmlSeletorCampeao(valor, acao, rotulo) {
+function htmlSeletorCampeao(valor, acao, rotulo, trava) {
   const ops = GRUPOS.map(([l, ts]) =>
     `<optgroup label="Grupo ${l}">` +
     ts.map(id => `<option value="${id}"${valor === id ? " selected" : ""}>${flagDe(id)} ${esc(nomeDe(id))}</option>`).join("") +
@@ -470,7 +563,7 @@ function htmlSeletorCampeao(valor, acao, rotulo) {
   return `<div class="card" style="border-color:rgba(244,200,75,.35)">` +
     `<div class="gcab"><span class="patch" style="font-size:16px">🏆</span>` +
     `<div><b>${rotulo}</b><small style="color:var(--ouro);font-weight:600">Vale +5 pontos</small></div></div>` +
-    `<select class="sel-camp${valor ? " tem" : ""}" data-acao="${acao}">` +
+    `<select class="sel-camp${valor ? " tem" : ""}" data-acao="${acao}"${trava ? " disabled" : ""}>` +
     `<option value="">— escolher seleção —</option>${ops}</select></div>`;
 }
 
@@ -512,10 +605,21 @@ function telaLogin() {
 }
 
 function abaPalpites() {
-  return `<div class="bloco">` +
-    `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Toque na seleção que fica em <b>1º</b> e depois na que fica em <b>2º</b> de cada grupo (toque de novo pra desmarcar). Acertar o 1º vale 2 pts; o 2º, 1 pt. Dá pra mudar até a última rodada (27/06).</div>` +
-    GRUPOS.map(([l, ts]) => htmlCardGrupo(l, ts, S.palpites[l], S.resultados.grupos[l], "pick")).join("") +
-    htmlSeletorCampeao(S.campeao, "campeao", "Campeão do mundo") +
+  const trava = S.travado;
+  const preench = calcPontos({ palpites: S.palpites, campeao: S.campeao }, S.resultados).preenchidos;
+  const topo = trava
+    ? `<div class="lockband">🔒 <b>Palpites cravados${S.travadoEm ? " em " + new Date(S.travadoEm).toLocaleDateString("pt-BR") : ""}.</b> Agora é só torcer — não dá mais pra trocar. Boa sorte! 🍀</div>`
+    : `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Toque na seleção que fica em <b>1º</b> e depois na de <b>2º</b> de cada grupo (toque de novo desmarca). Acertar o 1º vale 2 pts; o 2º, 1 pt. Salve à vontade e, quando tiver certeza, <b>crave</b> lá no fim — cravou, travou.</div>`;
+  const cravar = trava ? "" :
+    `<div class="card" style="border-color:rgba(244,200,75,.35)">` +
+      `<b style="font-size:15px;font-weight:800">Cravar palpites</b>` +
+      `<div class="suave" style="font-size:12.5px;line-height:1.5;margin:6px 0 12px">Depois de cravar, ninguém troca mais nada — nem você 😄. Complete os 25 palpites pra liberar o botão.</div>` +
+      `<button class="btn btn-lock" data-acao="cravar"${preench < 25 ? " disabled" : ""}>🔒 Cravar meus palpites (${preench}/25)</button>` +
+    `</div>`;
+  return `<div class="bloco">` + topo +
+    GRUPOS.map(([l, ts]) => htmlCardGrupo(l, ts, S.palpites[l], S.resultados.grupos[l], "pick", trava)).join("") +
+    htmlSeletorCampeao(S.campeao, "campeao", "Campeão do mundo", trava) +
+    cravar +
     `</div>`;
 }
 
@@ -533,7 +637,7 @@ function abaPlacar() {
       `<div class="rank${i === 0 && temRes ? " lider" : ""}">` +
       `<span class="pos">${temRes && i < 3 ? medalhas[i] : `<i>${i+1}º</i>`}</span>` +
       avatarHtml(j.nome,36) +
-      `<span class="info"><b>${esc(j.nome)}</b><small>${
+      `<span class="info"><b>${esc(j.nome)}${j.travado ? ' <span style="font-size:11px">🔒</span>' : ""}</b><small>${
         temRes
           ? `${j.p.acertos} de ${j.p.definidos} posições${j.p.bonus ? " · campeão ✓" : ""}`
           : `${j.p.preenchidos}/25 palpites feitos`
@@ -571,7 +675,7 @@ function abaPlacar() {
     `<div class="linhachips">${chipsC}</div></div>`;
 
   return `<div class="bloco" style="gap:22px">` +
-    `<section><div class="sec-title">CLASSIFICAÇÃO</div>` +
+    `<section><div class="sec-title">CLASSIFICAÇÃO · ${ranking.length} ${ranking.length === 1 ? "PESSOA" : "PESSOAS"}</div>` +
     (!temRes ? `<div class="note" style="margin-bottom:10px">Os pontos aparecem quando os resultados forem marcados na aba <b>Resultados</b>. 1º colocado certo vale 2 pontos, 2º vale 1 e o campeão do mundo vale 5.</div>` : "") +
     `<div class="gap8">${linhas}</div></section>` +
     `<section><div class="sec-title">PALPITES POR GRUPO</div>` +
@@ -584,6 +688,69 @@ function abaResultados() {
     GRUPOS.map(([l, ts]) => htmlCardGrupo(l, ts, S.resTemp.grupos[l], null, "respick")).join("") +
     htmlSeletorCampeao(S.resTemp.campeao, "rescampeao", "Campeão do mundo (oficial)") +
     `</div>`;
+}
+
+/* ---------- Aba Brasil ---------- */
+function bandInfo(j) {
+  const tem = j.b != null && j.b !== "" && j.a != null && j.a !== "";
+  if (!tem) return { cls: "aj", tx: "A JOGAR" };
+  const b = +j.b, a = +j.a;
+  if (b > a) return { cls: "v", tx: "VITÓRIA · " + b + " × " + a };
+  if (b < a) return { cls: "d", tx: "DERROTA · " + b + " × " + a };
+  return { cls: "e", tx: "EMPATE · " + b + " × " + a };
+}
+
+function pintarSavebar() {
+  const bar = document.querySelector(".savebar");
+  if (!bar) return;
+  bar.className = "savebar" + (precisaSavebar() ? " on" : "");
+  if (S.aba === "brasil") {
+    const bt = bar.querySelector("button");
+    if (bt) { bt.disabled = S.salvandoBr || !S.brSujo; bt.textContent = S.salvandoBr ? "Salvando…" : "Salvar placares"; }
+  }
+}
+
+function htmlJogoBr(j) {
+  const advFlag = j.adv ? flagDe(j.adv) : "❓";
+  const advNome = j.adv ? nomeDe(j.adv) : "A definir";
+  const bi = bandInfo(j);
+  return `<div class="card" style="position:relative">` +
+    (!j.fixo ? `<button class="xdel" data-acao="delbr" data-id="${j.id}">✕</button>` : "") +
+    `<div class="jbr-cab"><b style="color:var(--giz);font-weight:800;font-size:13px">${esc(j.fase)}</b><span>${esc(j.data || "")}</span></div>` +
+    (j.local ? `<div class="apagado" style="font-size:11.5px;margin-top:2px">${esc(j.local)}</div>` : "") +
+    `<div class="placarrow" style="margin-top:14px">` +
+      `<span class="ptime"><span class="pflag">🇧🇷</span><span class="pnome">Brasil</span></span>` +
+      `<input class="pgol" inputmode="numeric" maxlength="2" data-id="${j.id}" data-lado="b" value="${j.b ?? ""}">` +
+      `<span class="px">×</span>` +
+      `<input class="pgol" inputmode="numeric" maxlength="2" data-id="${j.id}" data-lado="a" value="${j.a ?? ""}">` +
+      `<span class="ptime"><span class="pflag">${advFlag}</span><span class="pnome">${esc(advNome)}</span></span>` +
+    `</div>` +
+    `<div class="resband ${bi.cls}" id="band-${j.id}">${bi.tx}</div>` +
+  `</div>`;
+}
+
+function abaBrasil() {
+  if (!Object.keys(S.brTemp).length) S.brTemp = montarBrTemp();
+  const lista = Object.values(S.brTemp).sort((x, y) => (x.ordem || 0) - (y.ordem || 0));
+  const cards = lista.map(htmlJogoBr).join("");
+  const form = S.brForm
+    ? `<div class="card"><b style="font-size:15px;font-weight:800">Novo jogo do mata-mata</b>` +
+      `<div class="addrow" style="margin-top:10px">` +
+        `<select id="brFase" class="inputsm">` + FASES_MM.map(f => `<option>${f}</option>`).join("") + `</select>` +
+        `<select id="brAdv" class="inputsm"><option value="">Adversário a definir</option>` +
+          GRUPOS.flatMap(([, ts]) => ts).filter(id => id !== "BRA")
+            .sort((a, b) => nomeDe(a).localeCompare(nomeDe(b), "pt-BR"))
+            .map(id => `<option value="${id}">${flagDe(id)} ${esc(nomeDe(id))}</option>`).join("") +
+        `</select></div>` +
+      `<input id="brData" class="inputsm" placeholder="Data e hora · ex.: 04/07 · 17h" style="margin-top:8px">` +
+      `<div style="display:flex;gap:8px;margin-top:10px">` +
+        `<button class="btn btn-gold" style="padding:12px;font-size:14px" data-acao="addbr">Adicionar</button>` +
+        `<button class="btn" style="padding:12px;font-size:14px;border:1px solid var(--borda);background:var(--card-alto)" data-acao="addbrtoggle">Cancelar</button>` +
+      `</div></div>`
+    : `<button class="btn" style="border:1.5px dashed rgba(244,200,75,.4);background:transparent;color:var(--ouro);font-size:14px;font-weight:700;padding:13px" data-acao="addbrtoggle">＋ Adicionar jogo do mata-mata</button>`;
+  return `<div class="bloco">` +
+    `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Placar real dos jogos da Seleção (horário de Brasília). Qualquer um da família pode preencher — atualiza pra todo mundo. Quando o Brasil avançar, adicione os jogos do mata-mata aqui embaixo. 🇧🇷</div>` +
+    cards + form + `</div>`;
 }
 
 /* ---------- Render ---------- */
@@ -604,21 +771,35 @@ function render() {
   }
 
   const y = window.scrollY;
+  const vF = $("#brFase") ? $("#brFase").value : null;
+  const vA = $("#brAdv") ? $("#brAdv").value : null;
+  const vD = $("#brData") ? $("#brData").value : "";
   const conteudo =
     S.aba === "palpites" ? abaPalpites() :
-    S.aba === "placar" ? abaPlacar() : abaResultados();
+    S.aba === "placar" ? abaPlacar() :
+    S.aba === "brasil" ? abaBrasil() : abaResultados();
 
-  const stSave = S.aba === "palpites"
-    ? (S.sujo
-        ? `Alterações não salvas · ${calcPontos({palpites:S.palpites,campeao:S.campeao},S.resultados).preenchidos}/25`
-        : `Salvo às ${S.salvoAs} ✓`)
-    : "Resultados alterados";
-  const btSave = S.aba === "palpites"
-    ? (S.salvando ? "Salvando…" : "Salvar palpites")
-    : (S.salvandoRes ? "Salvando…" : "Salvar resultados");
-  const btDis = S.aba === "palpites" ? (S.salvando || !S.sujo) : (S.salvandoRes || !S.resSujo);
+  let stSave, btSave, btDis, acSave;
+  if (S.aba === "palpites") {
+    stSave = S.sujo
+      ? `Alterações não salvas · ${calcPontos({palpites:S.palpites,campeao:S.campeao},S.resultados).preenchidos}/25`
+      : `Salvo às ${S.salvoAs} ✓`;
+    btSave = S.salvando ? "Salvando…" : "Salvar palpites";
+    btDis = S.salvando || !S.sujo;
+    acSave = "salvar";
+  } else if (S.aba === "brasil") {
+    stSave = "Placares alterados";
+    btSave = S.salvandoBr ? "Salvando…" : "Salvar placares";
+    btDis = S.salvandoBr || !S.brSujo;
+    acSave = "salvarbr";
+  } else {
+    stSave = "Resultados alterados";
+    btSave = S.salvandoRes ? "Salvando…" : "Salvar resultados";
+    btDis = S.salvandoRes || !S.resSujo;
+    acSave = "salvarres";
+  }
 
-  const tabs = [["palpites","Palpites","✏️"],["placar","Placar","🏆"],["resultados","Resultados","📋"]];
+  const tabs = [["palpites","Palpites","✏️"],["placar","Placar","🏆"],["brasil","Brasil","🇧🇷"],["resultados","Resultados","📋"]];
 
   app.innerHTML =
     `<header class="hd"><div class="hd-in">` +
@@ -629,7 +810,7 @@ function render() {
     `<main>${conteudo}</main>` +
     `<div class="savebar${precisaSavebar() ? " on" : ""}"><div class="savebar-in">` +
       `<span class="st">${stSave}</span>` +
-      `<button data-acao="${S.aba === "palpites" ? "salvar" : "salvarres"}"${btDis ? " disabled" : ""}>${btSave}</button>` +
+      `<button data-acao="${acSave}"${btDis ? " disabled" : ""}>${btSave}</button>` +
     `</div></div>` +
     `<div id="toast" class="toast" style="display:none"></div>` +
     `<nav class="tabbar"><div class="tabbar-in">` +
@@ -639,6 +820,11 @@ function render() {
     `</div></nav>`;
 
   window.scrollTo(0, y);
+  if (S.brForm) {
+    if (vF !== null && $("#brFase")) $("#brFase").value = vF;
+    if (vA !== null && $("#brAdv")) $("#brAdv").value = vA;
+    if (vD && $("#brData")) $("#brData").value = vD;
+  }
 }
 
 /* ---------- Eventos (delegação) ---------- */
@@ -653,8 +839,30 @@ document.addEventListener("click", e => {
   if (a === "aba") { S.aba = el.getAttribute("data-aba"); render(); }
   if (a === "salvar") salvarPalpites();
   if (a === "salvarres") salvarResultados();
+  if (a === "salvarbr") salvarBrasil();
+  if (a === "cravar") {
+    const p = calcPontos({ palpites: S.palpites, campeao: S.campeao }, S.resultados).preenchidos;
+    if (p < 25) { avisar("Complete os 25 palpites antes de cravar.", "erro"); return; }
+    if (S.sujo) { avisar("Salve seus palpites antes de cravar.", "erro"); return; }
+    if (confirm("Cravar seus palpites? Depois disso não dá mais pra trocar nada.")) salvarPalpites(true);
+  }
+
+  if (a === "addbrtoggle") { S.brForm = !S.brForm; render(); }
+  if (a === "addbr") {
+    const fase = $("#brFase") ? $("#brFase").value : FASES_MM[0];
+    const adv = $("#brAdv") ? $("#brAdv").value : "";
+    const data = $("#brData") ? $("#brData").value.trim() : "";
+    const id = "x" + Date.now();
+    S.brTemp[id] = { id, ordem: 100 + Object.keys(S.brTemp).length, fase, adv: adv || null, data, local: "", b: null, a: null, fixo: false };
+    S.brForm = false; S.brSujo = true; render();
+  }
+  if (a === "delbr") {
+    delete S.brTemp[el.getAttribute("data-id")];
+    S.brSujo = true; render();
+  }
 
   if (a === "pick") {
+    if (S.travado) return;
     const g = el.getAttribute("data-g"), t = el.getAttribute("data-t");
     S.palpites[g] = alternar(S.palpites[g], t);
     S.sujo = true; render();
@@ -670,8 +878,22 @@ document.addEventListener("change", e => {
   const el = e.target.closest("[data-acao]");
   if (!el) return;
   const a = el.getAttribute("data-acao");
-  if (a === "campeao") { S.campeao = el.value || null; S.sujo = true; render(); }
+  if (a === "campeao" && !S.travado) { S.campeao = el.value || null; S.sujo = true; render(); }
   if (a === "rescampeao") { S.resTemp.campeao = el.value || null; S.resSujo = true; render(); }
+});
+
+document.addEventListener("input", e => {
+  const el = e.target;
+  if (!el.classList || !el.classList.contains("pgol")) return;
+  const id = el.getAttribute("data-id"), lado = el.getAttribute("data-lado");
+  const v = el.value.replace(/\D/g, "").slice(0, 2);
+  if (el.value !== v) el.value = v;
+  if (!S.brTemp[id]) return;
+  S.brTemp[id][lado] = v === "" ? null : +v;
+  S.brSujo = true;
+  const band = document.getElementById("band-" + id);
+  if (band) { const bi = bandInfo(S.brTemp[id]); band.className = "resband " + bi.cls; band.textContent = bi.tx; }
+  pintarSavebar();
 });
 
 document.addEventListener("keydown", e => {
