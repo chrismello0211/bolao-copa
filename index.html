@@ -339,9 +339,9 @@ const GRUPOS = [
 const CORES_AVATAR = ["#F4C84B","#34C77B","#5AA9E6","#E5544D","#B07CF0","#F08A4B"];
 
 const JOGOS_BR_FIXOS = [
-  { id: "g1", ordem: 1, fase: "Grupo C · Rodada 1", adv: "MAR", data: "Sáb 13/06 · 19h", local: "MetLife Stadium · Nova Jersey" },
-  { id: "g2", ordem: 2, fase: "Grupo C · Rodada 2", adv: "HAI", data: "Sex 19/06 · 21h30", local: "Lincoln Financial Field · Filadélfia" },
-  { id: "g3", ordem: 3, fase: "Grupo C · Rodada 3", adv: "SCO", data: "Qua 24/06 · 19h", local: "Hard Rock Stadium · Miami" }
+  { id: "g1", ordem: 1, fase: "Grupo C · Rodada 1", adv: "MAR", data: "Sáb 13/06 · 19h", kick: Date.parse("2026-06-13T19:00:00-03:00"), local: "MetLife Stadium · Nova Jersey" },
+  { id: "g2", ordem: 2, fase: "Grupo C · Rodada 2", adv: "HAI", data: "Sex 19/06 · 21h30", kick: Date.parse("2026-06-19T21:30:00-03:00"), local: "Lincoln Financial Field · Filadélfia" },
+  { id: "g3", ordem: 3, fase: "Grupo C · Rodada 3", adv: "SCO", data: "Qua 24/06 · 19h", kick: Date.parse("2026-06-24T19:00:00-03:00"), local: "Hard Rock Stadium · Miami" }
 ];
 const FASES_MM = ["16 avos de final", "Oitavas de final", "Quartas de final", "Semifinal", "Disputa de 3º lugar", "Final"];
 
@@ -437,16 +437,35 @@ function montarOficial() {
     const d = dbj[f.id] || {};
     m[f.id] = { id: f.id, fixo: true, ordem: d.ordem || f.ordem,
       fase: d.fase || f.fase, adv: ("adv" in d) ? d.adv : f.adv,
-      data: d.data || f.data, local: d.local || f.local,
+      data: d.data || f.data, kick: d.kick || f.kick || null, local: d.local || f.local,
       oficial: d.oficial || { b: null, a: null } };
   }
   for (const k in dbj) if (!m[k]) {
     const d = dbj[k];
     m[k] = { id: k, fixo: false, ordem: d.ordem || 0, fase: d.fase || "",
-      adv: d.adv || null, data: d.data || "", local: d.local || "",
+      adv: d.adv || null, data: d.data || "", kick: d.kick || null, local: d.local || "",
       oficial: d.oficial || { b: null, a: null } };
   }
   return m;
+}
+
+// jogo já começou? (trava o palpite de placar daquele jogo)
+function jogoComecou(gid) {
+  const j = (S.brOfTemp && S.brOfTemp[gid]) || null;
+  const kick = j && j.kick;
+  return !!(kick && Date.now() >= kick);
+}
+
+// formata epoch -> "Sáb 13/06 · 19h" (ou 19h30)
+function fmtData(ms) {
+  if (!ms) return "";
+  const d = new Date(ms);
+  const dias = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  const dd = String(d.getDate()).padStart(2,"0");
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const h = d.getHours(), min = d.getMinutes();
+  const hora = min ? `${h}h${String(min).padStart(2,"0")}` : `${h}h`;
+  return `${dias[d.getDay()]} ${dd}/${mm} · ${hora}`;
 }
 
 function montarMeu() {
@@ -578,12 +597,16 @@ async function salvarBrasil() {
   S.salvandoBr = true; pintarSavebar();
   let msg = "Seu palpite do Brasil foi salvo 🇧🇷", tipo = "";
   try {
-    const meu = {};
+    const sl = slug(S.nome);
+    // parte do que já está salvo (preserva jogos que já começaram)
+    const out = { ...((S.brPalpites || {})[sl] || {}) };
     for (const [gid, p] of Object.entries(S.brMeuTemp)) {
+      if (jogoComecou(gid)) continue; // jogo começou: não mexe
       if (p && p.b != null && p.b !== "" && p.a != null && p.a !== "")
-        meu[gid] = { b: +p.b, a: +p.a };
+        out[gid] = { b: +p.b, a: +p.a };
+      else delete out[gid];
     }
-    await set(ref(db, "bolao/brasil/palpites/" + slug(S.nome)), meu);
+    await set(ref(db, "bolao/brasil/palpites/" + sl), out);
     S.brSujo = false;
   } catch (e) {
     msg = "Não consegui salvar."; tipo = "erro";
@@ -823,7 +846,10 @@ function htmlJogoBr(j) {
   const of = j.oficial || {};
   const temOf = of.b != null && of.b !== "" && of.a != null && of.a !== "";
   const bi = bandInfo(of);
-  const meu = S.brMeuTemp[j.id] || {};
+  const comecou = jogoComecou(j.id);
+  const sl = S.nome ? slug(S.nome) : "";
+  const salvo = (S.brPalpites[sl] || {})[j.id] || {};
+  const meu = comecou ? salvo : (S.brMeuTemp[j.id] || {});
   const oficialRow =
     `<div class="placarrow">` +
       `<span class="ptime"><span class="pflag">🇧🇷</span><span class="pnome">Brasil</span></span>` +
@@ -832,14 +858,22 @@ function htmlJogoBr(j) {
       `<span class="goread">${temOf ? of.a : "–"}</span>` +
       `<span class="ptime"><span class="pflag">${advFlag}</span><span class="pnome">${esc(advNome)}</span></span>` +
     `</div>`;
-  const meuRow =
-    `<div class="placarrow">` +
-      `<span class="ptime"><span class="pflag">🇧🇷</span><span class="pnome">Brasil</span></span>` +
-      `<input class="pgol" inputmode="numeric" maxlength="2" data-kind="me" data-id="${j.id}" data-lado="b" value="${meu.b ?? ""}">` +
-      `<span class="px">×</span>` +
-      `<input class="pgol" inputmode="numeric" maxlength="2" data-kind="me" data-id="${j.id}" data-lado="a" value="${meu.a ?? ""}">` +
-      `<span class="ptime"><span class="pflag">${advFlag}</span><span class="pnome">${esc(advNome)}</span></span>` +
-    `</div>`;
+  const meuRow = comecou
+    ? `<div class="placarrow">` +
+        `<span class="ptime"><span class="pflag">🇧🇷</span><span class="pnome">Brasil</span></span>` +
+        `<span class="goread">${meu.b ?? "–"}</span>` +
+        `<span class="px">×</span>` +
+        `<span class="goread">${meu.a ?? "–"}</span>` +
+        `<span class="ptime"><span class="pflag">${advFlag}</span><span class="pnome">${esc(advNome)}</span></span>` +
+      `</div>` +
+      `<div class="apagado" style="text-align:center;font-size:11.5px;margin-top:7px">🔒 Palpite fechado — o jogo já começou</div>`
+    : `<div class="placarrow">` +
+        `<span class="ptime"><span class="pflag">🇧🇷</span><span class="pnome">Brasil</span></span>` +
+        `<input class="pgol" inputmode="numeric" maxlength="2" data-kind="me" data-id="${j.id}" data-lado="b" value="${meu.b ?? ""}">` +
+        `<span class="px">×</span>` +
+        `<input class="pgol" inputmode="numeric" maxlength="2" data-kind="me" data-id="${j.id}" data-lado="a" value="${meu.a ?? ""}">` +
+        `<span class="ptime"><span class="pflag">${advFlag}</span><span class="pnome">${esc(advNome)}</span></span>` +
+      `</div>`;
   return `<div class="card" style="position:relative">` +
     (!j.fixo ? `<button class="xdel" data-acao="delbr" data-id="${j.id}">✕</button>` : "") +
     `<div class="jbr-cab"><b style="color:var(--giz);font-weight:800;font-size:13px">${esc(j.fase)}</b><span>${esc(j.data || "")}</span></div>` +
@@ -865,7 +899,8 @@ function abaBrasil() {
             .sort((a, b) => nomeDe(a).localeCompare(nomeDe(b), "pt-BR"))
             .map(id => `<option value="${id}">${flagDe(id)} ${esc(nomeDe(id))}</option>`).join("") +
         `</select></div>` +
-      `<input id="brData" class="inputsm" placeholder="Data e hora · ex.: 04/07 · 17h" style="margin-top:8px">` +
+      `<label style="display:block;font-size:11px;color:var(--giz-apagado);margin:10px 2px 4px">Início do jogo (trava o palpite quando começar)</label>` +
+      `<input id="brData" type="datetime-local" class="inputsm">` +
       `<div style="display:flex;gap:8px;margin-top:10px">` +
         `<button class="btn btn-gold" style="padding:12px;font-size:14px" data-acao="addbr">Adicionar</button>` +
         `<button class="btn" style="padding:12px;font-size:14px;border:1px solid var(--borda);background:var(--card-alto)" data-acao="addbrtoggle">Cancelar</button>` +
@@ -973,10 +1008,12 @@ document.addEventListener("click", e => {
   if (a === "addbr") {
     const fase = $("#brFase") ? $("#brFase").value : FASES_MM[0];
     const adv = $("#brAdv") ? $("#brAdv").value : "";
-    const data = $("#brData") ? $("#brData").value.trim() : "";
+    const vD = $("#brData") ? $("#brData").value : "";
+    const kick = vD ? new Date(vD).getTime() : null;
+    const data = kick ? fmtData(kick) : "";
     const id = "x" + Date.now();
     const ordem = 100 + Object.keys(S.brOfTemp).length;
-    const jogo = { ordem, fase, adv: adv || null, data, local: "", oficial: { b: null, a: null } };
+    const jogo = { ordem, fase, adv: adv || null, data, kick, local: "", oficial: { b: null, a: null } };
     S.brOfTemp[id] = { id, fixo: false, ...jogo };
     set(ref(db, "bolao/brasil/jogos/" + id), jogo);
     S.brForm = false; render();
@@ -1017,6 +1054,7 @@ document.addEventListener("input", e => {
   if (el.value !== v) el.value = v;
   const val = v === "" ? null : +v;
   if (kind === "me") {
+    if (jogoComecou(id)) return; // jogo começou: palpite travado
     (S.brMeuTemp[id] = S.brMeuTemp[id] || { b: null, a: null })[lado] = val;
   } else {
     const j = S.brOfTemp[id]; if (!j) return;
@@ -1030,6 +1068,17 @@ document.addEventListener("input", e => {
 document.addEventListener("keydown", e => {
   if (e.key === "Enter" && e.target && e.target.id === "inome") entrar(e.target.value);
 });
+
+// trava automática: ao cruzar o horário de início de um jogo, re-renderiza
+let _comecadosVistos = {};
+setInterval(() => {
+  let mudou = false;
+  for (const gid in (S.brOfTemp || {})) {
+    const c = jogoComecou(gid);
+    if (c && !_comecadosVistos[gid]) { _comecadosVistos[gid] = true; mudou = true; }
+  }
+  if (mudou && S.aba === "brasil") renderSeguro();
+}, 20000);
 
 render();
 }
