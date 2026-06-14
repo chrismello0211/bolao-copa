@@ -218,6 +218,12 @@ select.sel-camp:disabled{opacity:.7}
   padding:12px 14px;font-size:13px;line-height:1.5}
 .btn-lock{background:transparent;border:1.5px solid rgba(244,200,75,.5);color:var(--ouro);font-size:14px;padding:13px}
 .btn-lock:disabled{opacity:.4}
+details.comopontua{background:var(--card);border:1px solid var(--borda);border-radius:14px;overflow:hidden}
+details.comopontua summary{cursor:pointer;padding:13px 16px;font-weight:700;font-size:13.5px;list-style:none;-webkit-tap-highlight-color:transparent}
+details.comopontua summary::-webkit-details-marker{display:none}
+details.comopontua summary::after{content:"＋";float:right;color:var(--ouro);font-weight:700}
+details.comopontua[open] summary::after{content:"–"}
+details.comopontua .corpo{padding:2px 16px 15px;font-size:12.5px;line-height:1.7}
 </style>
 </head>
 <body>
@@ -301,7 +307,7 @@ window.FIREBASE_CONFIG = {
 if (window.__CFG_OK) {
 
 const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-const { getDatabase, ref, onValue, set } =
+const { getDatabase, ref, onValue, set, update } =
   await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
 
 const fb = initializeApp(window.FIREBASE_CONFIG);
@@ -383,7 +389,8 @@ const S = {
   aba: "palpites",
   palpites: {}, campeao: null, sujo: false, salvoAs: null, salvando: false,
   travado: false, travadoEm: null,
-  jogadores: [], resultados: { grupos:{}, campeao:null },
+  vice: null, terceiro: null, podioTravado: false, podioSujo: false, salvandoPodio: false,
+  jogadores: [], resultados: { grupos:{}, campeao:null, vice:null, terceiro:null },
   resTemp: { grupos:{}, campeao:null }, resSujo: false, salvandoRes: false,
   brJogos: {}, brPalpites: {}, brOfTemp: {}, brMeuTemp: {}, brSujo: false, salvandoBr: false, brForm: false,
   conectado: true, pronto: false
@@ -407,12 +414,18 @@ onValue(ref(db, "bolao/jogadores"), snap => {
       if (d) { S.palpites = normTodos(d.palpites); S.campeao = d.campeao || null; }
       S.travado = false; S.travadoEm = null;
     }
+    // Pódio (vice/3º) é independente do travamento dos palpites principais
+    if (meu && !S.podioSujo) {
+      S.vice = meu.vice || null;
+      S.terceiro = meu.terceiro || null;
+      S.podioTravado = !!meu.podioTravado;
+    }
   }
   S.pronto = true; renderSeguro();
 });
 onValue(ref(db, "bolao/resultados"), snap => {
   const v = snap.val() || {};
-  S.resultados = { grupos: normTodos(v.grupos), campeao: v.campeao || null };
+  S.resultados = { grupos: normTodos(v.grupos), campeao: v.campeao || null, vice: v.vice || null, terceiro: v.terceiro || null };
   if (!S.resSujo) S.resTemp = { grupos: {...S.resultados.grupos}, campeao: S.resultados.campeao };
   renderSeguro();
 });
@@ -456,6 +469,11 @@ function jogoComecou(gid) {
   return !!(kick && Date.now() >= kick);
 }
 
+/* Pódio (vice + 3º): editável até cada um confirmar (trava na hora) ou até
+   o início do mata-mata como backstop. */
+const PODIO_DEADLINE = Date.parse("2026-06-28T00:00:00-03:00");
+function podioComecou() { return Date.now() >= PODIO_DEADLINE; }
+
 // formata epoch -> "Sáb 13/06 · 19h" (ou 19h30)
 function fmtData(ms) {
   if (!ms) return "";
@@ -492,7 +510,9 @@ function calcPontos(j, res) {
     if (meu.p1) preenchidos++;
     if (meu.p2) preenchidos++;
   }
-  const bonus = res.campeao && j.campeao === res.campeao ? 5 : 0;
+  const bonus = (res.campeao && j.campeao === res.campeao ? 5 : 0)
+    + (res.vice && j.vice === res.vice ? 3 : 0)
+    + (res.terceiro && j.terceiro === res.terceiro ? 2 : 0);
   if (j.campeao) preenchidos++;
   return { acertos, definidos, bonus, pts: pts + bonus, preenchidos };
 }
@@ -549,12 +569,17 @@ function entrar(n) {
     S.campeao = meu.campeao || null;
     S.travado = !!meu.travado;
     S.travadoEm = meu.travadoEm || null;
+    S.vice = meu.vice || null;
+    S.terceiro = meu.terceiro || null;
+    S.podioTravado = !!meu.podioTravado;
   } else {
     const d = lerDraft(limpo);
     S.palpites = d ? normTodos(d.palpites) : {};
     S.campeao = d ? d.campeao || null : null;
     S.travado = false; S.travadoEm = null;
+    S.vice = null; S.terceiro = null; S.podioTravado = false;
   }
+  S.podioSujo = false;
   S.brMeuTemp = montarMeu(); S.brOfTemp = montarOficial(); S.brSujo = false;
   S.sujo = false; S.salvoAs = null; S.aba = "palpites";
   render();
@@ -566,7 +591,7 @@ async function salvarPalpites(travar) {
   let msg = "Palpites enviados e travados! Agora é torcer ⚽", tipo = "";
   try {
     const agora = Date.now();
-    await set(ref(db, "bolao/jogadores/" + slug(S.nome)),
+    await update(ref(db, "bolao/jogadores/" + slug(S.nome)),
       { nome: S.nome, palpites: S.palpites, campeao: S.campeao, ts: agora,
         travado: true, travadoEm: agora });
     S.sujo = false; S.salvoAs = horaAgora();
@@ -576,6 +601,24 @@ async function salvarPalpites(travar) {
     msg = "Não consegui enviar. Tenta de novo."; tipo = "erro";
   }
   S.salvando = false; render(); avisar(msg, tipo);
+}
+
+function podioFechado() { return S.podioTravado || podioComecou(); }
+
+async function salvarPodio() {
+  if (!S.nome || S.salvandoPodio || podioFechado()) return;
+  if (!S.vice || !S.terceiro) { avisar("Escolha o 2º e o 3º lugar antes de confirmar.", "erro"); return; }
+  S.salvandoPodio = true; render();
+  let msg = "Pódio confirmado e travado! 🏅", tipo = "";
+  try {
+    const agora = Date.now();
+    await update(ref(db, "bolao/jogadores/" + slug(S.nome)),
+      { nome: S.nome, vice: S.vice, terceiro: S.terceiro, podioTravado: true, podioTravadoEm: agora });
+    S.podioTravado = true; S.podioSujo = false;
+  } catch (e) {
+    msg = "Não consegui confirmar. Tenta de novo."; tipo = "erro";
+  }
+  S.salvandoPodio = false; render(); avisar(msg, tipo);
 }
 
 async function salvarResultados() {
@@ -654,6 +697,17 @@ function htmlSeletorCampeao(valor, acao, rotulo, trava) {
     `<option value="">— escolher seleção —</option>${ops}</select></div>`;
 }
 
+function htmlSelTime(valor, acao, rotulo, sub, icone, trava) {
+  const ops = GRUPOS.map(([l, ts]) =>
+    `<optgroup label="Grupo ${l}">` +
+    ts.map(id => `<option value="${id}"${valor === id ? " selected" : ""}>${flagDe(id)} ${esc(nomeDe(id))}</option>`).join("") +
+    `</optgroup>`).join("");
+  return `<div class="gcab" style="margin-top:14px"><span class="patch" style="font-size:16px">${icone}</span>` +
+    `<div><b>${rotulo}</b><small style="color:var(--ouro);font-weight:600">${sub}</small></div></div>` +
+    `<select class="sel-camp${valor ? " tem" : ""}" data-acao="${acao}"${trava ? " disabled" : ""}>` +
+    `<option value="">— escolher seleção —</option>${ops}</select>`;
+}
+
 function htmlChip(j, pick, real) {
   const certo = real && pick === real;
   const errado = real && pick && pick !== real;
@@ -703,10 +757,29 @@ function abaPalpites() {
       `<div style="font-size:12.5px;line-height:1.5;margin:6px 0 12px;color:var(--vermelho)">⚠️ Ao enviar, seus palpites <b>travam de vez</b> — ninguém troca depois, nem você. Confira tudo antes.</div>` +
       `<button class="btn btn-lock" data-acao="enviar"${preench < 25 ? " disabled" : ""}>${preench < 25 ? `Faltam ${25 - preench} palpites (${preench}/25)` : "🔒 Enviar e travar meus palpites"}</button>` +
     `</div>`;
+  const fechadoP = podioFechado();
+  const linhaP = (rot, val, ico) =>
+    `<div style="display:flex;align-items:center;gap:8px;font-size:14px;margin:5px 0"><span>${ico}</span>` +
+    `<b>${rot}:</b> ${val ? `${flagDe(val)} ${esc(nomeDe(val))}` : `<span class="apagado">não escolhido</span>`}</div>`;
+  const faltaP = !S.vice || !S.terceiro;
+  const podio = fechadoP
+    ? `<div class="card" style="border-color:rgba(244,200,75,.35)">` +
+        `<b style="font-size:15px;font-weight:800">🏅 Pódio da Copa</b>` +
+        linhaP("Vice (2º)", S.vice, "🥈") + linhaP("3º lugar", S.terceiro, "🥉") +
+        `<div class="apagado" style="font-size:12px;margin-top:8px">🔒 ${S.podioTravado ? "Pódio confirmado — não dá mais pra trocar." : "Pódio fechado (mata-mata começou)."}</div>` +
+      `</div>`
+    : `<div class="card" style="border-color:rgba(244,200,75,.35)">` +
+        `<b style="font-size:15px;font-weight:800">🏅 Pódio da Copa</b>` +
+        `<div class="suave" style="font-size:12.5px;line-height:1.5;margin:6px 0 2px">Além do campeão, complete o pódio: quem fica em <b>2º</b> (vice, +3 pts) e em <b>3º</b> lugar (+2 pts). <b>Ao confirmar, trava.</b> Quem não confirmar trava sozinho no início do mata-mata (28/06).</div>` +
+        htmlSelTime(S.vice, "vice", "Vice-campeão (2º lugar)", "Vale +3 pontos", "🥈", false) +
+        htmlSelTime(S.terceiro, "terceiro", "Terceiro lugar", "Vale +2 pontos", "🥉", false) +
+        `<button class="btn btn-lock" style="margin-top:14px" data-acao="confirmarpodio"${faltaP ? " disabled" : ""}>${faltaP ? "Escolha o 2º e o 3º lugar" : "🔒 Confirmar pódio"}</button>` +
+      `</div>`;
   return `<div class="bloco">` + topo +
     GRUPOS.map(([l, ts]) => htmlCardGrupo(l, ts, S.palpites[l], S.resultados.grupos[l], "pick", trava)).join("") +
     htmlSeletorCampeao(S.campeao, "campeao", "Campeão do mundo", trava) +
     enviar +
+    podio +
     `</div>`;
 }
 
@@ -729,7 +802,7 @@ function abaPlacar() {
     : ranking.map((j,i) => {
         const partes = [];
         if (j.p.definidos > 0) partes.push(`${j.p.acertos} de ${j.p.definidos} posições`);
-        if (j.p.bonus) partes.push("campeão ✓");
+        if (j.p.bonus) partes.push(`pódio +${j.p.bonus}`);
         if (j.br.pts) partes.push(`placar +${j.br.pts}`);
         const sub = partes.length ? partes.join(" · ") : `${j.p.preenchidos}/25 palpites feitos`;
         const medalha = temRes && i < 3 && j.total > 0;
@@ -769,12 +842,36 @@ function abaPlacar() {
     `<div style="font-size:13px;font-weight:700;flex:1">${cabC}</div></div>` +
     `<div class="linhachips">${chipsC}</div></div>`;
 
+  const cardPodio = (ico, rot, real, key, nota) => {
+    const cab = real
+      ? `<span style="color:var(--verde)">${rot}: ${flagDe(real)} ${esc(nomeDe(real))}</span>`
+      : `<span class="apagado" style="font-weight:600">${rot} · ${nota}</span>`;
+    const chips = S.jogadores.length
+      ? S.jogadores.map(j => htmlChip(j, j[key], real)).join("")
+      : `<span class="apagado" style="font-size:12px">Sem palpites por enquanto.</span>`;
+    return `<div class="card" style="padding:12px 14px;border-color:rgba(244,200,75,.3)">` +
+      `<div class="gcab" style="margin-bottom:${S.jogadores.length ? 10 : 0}px">` +
+      `<span class="patch sm" style="font-size:13px">${ico}</span>` +
+      `<div style="font-size:13px;font-weight:700;flex:1">${cab}</div></div>` +
+      `<div class="linhachips">${chips}</div></div>`;
+  };
+  const cardV = cardPodio("🥈", "Vice (2º)", S.resultados.vice, "vice", "final em 19/07");
+  const cardT = cardPodio("🥉", "3º lugar", S.resultados.terceiro, "terceiro", "disputa em 18/07");
+
+  const comoPontua = `<details class="comopontua"><summary>ℹ️ Como funciona a pontuação</summary>` +
+    `<div class="corpo">` +
+    `🏅 <b>Fase de grupos</b><br>· 1º colocado certo: <b>3 pts</b><br>· 2º colocado certo: <b>2 pts</b><br><br>` +
+    `🇧🇷 <b>Jogos do Brasil</b> (e mata-mata)<br>· Placar exato: <b>3 pts</b><br>· Só o vencedor (ou empate) certo: <b>1 pt</b><br><br>` +
+    `🏆 <b>Pódio do mundial</b><br>· Campeão: <b>5 pts</b> · Vice: <b>3 pts</b> · 3º lugar: <b>2 pts</b><br><br>` +
+    `<span class="apagado">Tudo atualiza conforme os jogos acontecem. Posição em branco = empate ou ainda sem jogo.</span>` +
+    `</div></details>`;
+
   return `<div class="bloco" style="gap:22px">` +
+    comoPontua +
     `<section><div class="sec-title">CLASSIFICAÇÃO · ${ranking.length} ${ranking.length === 1 ? "PESSOA" : "PESSOAS"}</div>` +
-    (!temRes ? `<div class="note" style="margin-bottom:10px">Os pontos aparecem conforme os resultados forem saindo. 1º colocado certo vale 3 pontos, 2º vale 2; acertar o placar de um jogo do Brasil vale 3 (ou 1 se acertar só o vencedor); e o campeão do mundo vale 5.</div>` : "") +
     `<div class="gap8">${linhas}</div></section>` +
     `<section><div class="sec-title">PALPITES POR GRUPO</div>` +
-    `<div class="gap8">${grupos}${cardC}</div></section></div>`;
+    `<div class="gap8">${grupos}${cardC}${cardV}${cardT}</div></section></div>`;
 }
 
 function abaResultados() {
@@ -996,6 +1093,7 @@ document.addEventListener("click", e => {
     if (p < 25) { avisar("Complete os 25 palpites antes de enviar.", "erro"); return; }
     salvarPalpites(true);
   }
+  if (a === "confirmarpodio") salvarPodio();
 
   if (a === "pick") {
     if (S.travado) return;
@@ -1010,6 +1108,8 @@ document.addEventListener("change", e => {
   if (!el) return;
   const a = el.getAttribute("data-acao");
   if (a === "campeao" && !S.travado) { S.campeao = el.value || null; S.sujo = true; salvarDraft(); render(); }
+  if (a === "vice" && !podioFechado()) { S.vice = el.value || null; S.podioSujo = true; render(); }
+  if (a === "terceiro" && !podioFechado()) { S.terceiro = el.value || null; S.podioSujo = true; render(); }
 });
 
 document.addEventListener("input", e => {
