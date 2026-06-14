@@ -615,8 +615,7 @@ async function salvarBrasil() {
 }
 
 function precisaSavebar() {
-  return (S.aba === "resultados" && S.resSujo) ||
-         (S.aba === "brasil" && S.brSujo);
+  return (S.aba === "brasil" && S.brSujo);
 }
 
 /* ---------- Pedaços de HTML ---------- */
@@ -779,11 +778,29 @@ function abaPlacar() {
 }
 
 function abaResultados() {
+  const rg = S.resultados.grupos || {};
+  const cards = GRUPOS.map(([l]) => {
+    const r = normPick(rg[l]);
+    let linha;
+    if (r.p1 && r.p2)
+      linha = `<b style="color:var(--verde)">1º ${flagDe(r.p1)} ${esc(nomeDe(r.p1))}</b> · <b style="color:var(--verde)">2º ${flagDe(r.p2)} ${esc(nomeDe(r.p2))}</b>`;
+    else if (r.p1)
+      linha = `<b style="color:var(--verde)">1º ${flagDe(r.p1)} ${esc(nomeDe(r.p1))}</b> · <span class="apagado">2º a definir</span>`;
+    else
+      linha = `<span class="apagado">Ainda em disputa</span>`;
+    return `<div class="card" style="display:flex;align-items:center;gap:12px;padding:14px 16px">` +
+      `<span class="patch">${l}</span>` +
+      `<div><div style="font-weight:800;font-size:13px;margin-bottom:2px">Grupo ${l}</div>` +
+      `<div style="font-size:13px">${linha}</div></div></div>`;
+  }).join("");
+  const camp = S.resultados.campeao;
+  const campCard = `<div class="card" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-color:rgba(244,200,75,.35)">` +
+    `<span style="font-size:22px">🏆</span>` +
+    `<div><div style="font-weight:800;font-size:13px;margin-bottom:2px">Campeão do mundo</div>` +
+    `<div style="font-size:13px">${camp ? `<b style="color:var(--verde)">${flagDe(camp)} ${esc(nomeDe(camp))}</b>` : `<span class="apagado">A definir na final (19/07)</span>`}</div></div></div>`;
   return `<div class="bloco">` +
-    `<div class="aviso">⚠️ Aqui se marca o <b>resultado oficial</b> conforme os grupos forem terminando. Isso vale pra família inteira e define a pontuação de todo mundo.</div>` +
-    GRUPOS.map(([l, ts]) => htmlCardGrupo(l, ts, S.resTemp.grupos[l], null, "respick")).join("") +
-    htmlSeletorCampeao(S.resTemp.campeao, "rescampeao", "Campeão do mundo (oficial)") +
-    `</div>`;
+    `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Classificação <b>oficial</b> dos grupos, atualizada conforme os jogos acontecem. É só pra acompanhar — quem atualiza é a organização. Posição em branco = ainda empatada ou sem jogo. 📋</div>` +
+    cards + campCard + `</div>`;
 }
 
 /* ---------- Aba Brasil ---------- */
@@ -877,7 +894,6 @@ function htmlJogoBr(j) {
         `<span class="ptime"><span class="pflag">${advFlag}</span><span class="pnome">${esc(advNome)}</span></span>` +
       `</div>`;
   return `<div class="card" style="position:relative">` +
-    (!j.fixo ? `<button class="xdel" data-acao="delbr" data-id="${j.id}">✕</button>` : "") +
     `<div class="jbr-cab"><b style="color:var(--giz);font-weight:800;font-size:13px">${esc(j.fase)}</b><span>${esc(j.data || "")}</span></div>` +
     (j.local ? `<div class="apagado" style="font-size:11.5px;margin-top:2px">${esc(j.local)}</div>` : "") +
     `<div class="brsub">Resultado oficial</div>` + oficialRow +
@@ -892,25 +908,9 @@ function abaBrasil() {
   if (!Object.keys(S.brOfTemp).length) S.brOfTemp = montarOficial();
   const lista = Object.values(S.brOfTemp).sort((x, y) => (x.ordem || 0) - (y.ordem || 0));
   const cards = lista.map(htmlJogoBr).join("");
-  const form = S.brForm
-    ? `<div class="card"><b style="font-size:15px;font-weight:800">Novo jogo do mata-mata</b>` +
-      `<div class="addrow" style="margin-top:10px">` +
-        `<select id="brFase" class="inputsm">` + FASES_MM.map(f => `<option>${f}</option>`).join("") + `</select>` +
-        `<select id="brAdv" class="inputsm"><option value="">Adversário a definir</option>` +
-          GRUPOS.flatMap(([, ts]) => ts).filter(id => id !== "BRA")
-            .sort((a, b) => nomeDe(a).localeCompare(nomeDe(b), "pt-BR"))
-            .map(id => `<option value="${id}">${flagDe(id)} ${esc(nomeDe(id))}</option>`).join("") +
-        `</select></div>` +
-      `<label style="display:block;font-size:11px;color:var(--giz-apagado);margin:10px 2px 4px">Início do jogo (trava o palpite quando começar)</label>` +
-      `<input id="brData" type="datetime-local" class="inputsm">` +
-      `<div style="display:flex;gap:8px;margin-top:10px">` +
-        `<button class="btn btn-gold" style="padding:12px;font-size:14px" data-acao="addbr">Adicionar</button>` +
-        `<button class="btn" style="padding:12px;font-size:14px;border:1px solid var(--borda);background:var(--card-alto)" data-acao="addbrtoggle">Cancelar</button>` +
-      `</div></div>`
-    : `<button class="btn" style="border:1.5px dashed rgba(244,200,75,.4);background:transparent;color:var(--ouro);font-size:14px;font-weight:700;padding:13px" data-acao="addbrtoggle">＋ Adicionar jogo do mata-mata</button>`;
   return `<div class="bloco">` +
-    `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Cada um informa só o <b>seu palpite de placar</b> dos jogos da Seleção — todo mundo vê o de todo mundo. O <b>resultado oficial</b> é preenchido depois que o jogo acaba e o app marca quem cravou o placar (✓). No mata-mata, adicione os jogos aqui embaixo. 🇧🇷</div>` +
-    cards + form + `</div>`;
+    `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Cada um informa só o <b>seu palpite de placar</b> dos jogos da Seleção — todo mundo vê o de todo mundo. O <b>resultado oficial</b> é preenchido pela organização depois que o jogo acaba, e o app marca quem cravou o placar (✓). 🇧🇷</div>` +
+    cards + `</div>`;
 }
 
 /* ---------- Render ---------- */
@@ -931,9 +931,6 @@ function render() {
   }
 
   const y = window.scrollY;
-  const vF = $("#brFase") ? $("#brFase").value : null;
-  const vA = $("#brAdv") ? $("#brAdv").value : null;
-  const vD = $("#brData") ? $("#brData").value : "";
   const conteudo =
     S.aba === "palpites" ? abaPalpites() :
     S.aba === "placar" ? abaPlacar() :
@@ -980,11 +977,6 @@ function render() {
     `</div></nav>`;
 
   window.scrollTo(0, y);
-  if (S.brForm) {
-    if (vF !== null && $("#brFase")) $("#brFase").value = vF;
-    if (vA !== null && $("#brAdv")) $("#brAdv").value = vA;
-    if (vD && $("#brData")) $("#brData").value = vD;
-  }
 }
 
 /* ---------- Eventos (delegação) ---------- */
@@ -997,7 +989,6 @@ document.addEventListener("click", e => {
   if (a === "chip") entrar(el.getAttribute("data-nome"));
   if (a === "trocar") { S.nome = null; S.sujo = false; render(); }
   if (a === "aba") { S.aba = el.getAttribute("data-aba"); render(); }
-  if (a === "salvarres") salvarResultados();
   if (a === "salvarbr") salvarBrasil();
   if (a === "enviar") {
     if (S.travado) return;
@@ -1006,37 +997,11 @@ document.addEventListener("click", e => {
     salvarPalpites(true);
   }
 
-  if (a === "addbrtoggle") { S.brForm = !S.brForm; render(); }
-  if (a === "addbr") {
-    const fase = $("#brFase") ? $("#brFase").value : FASES_MM[0];
-    const adv = $("#brAdv") ? $("#brAdv").value : "";
-    const vD = $("#brData") ? $("#brData").value : "";
-    const kick = vD ? new Date(vD).getTime() : null;
-    const data = kick ? fmtData(kick) : "";
-    const id = "x" + Date.now();
-    const ordem = 100 + Object.keys(S.brOfTemp).length;
-    const jogo = { ordem, fase, adv: adv || null, data, kick, local: "", oficial: { b: null, a: null } };
-    S.brOfTemp[id] = { id, fixo: false, ...jogo };
-    set(ref(db, "bolao/brasil/jogos/" + id), jogo);
-    S.brForm = false; render();
-  }
-  if (a === "delbr") {
-    const id = el.getAttribute("data-id");
-    delete S.brOfTemp[id];
-    set(ref(db, "bolao/brasil/jogos/" + id), null);
-    render();
-  }
-
   if (a === "pick") {
     if (S.travado) return;
     const g = el.getAttribute("data-g"), t = el.getAttribute("data-t");
     S.palpites[g] = alternar(S.palpites[g], t);
     S.sujo = true; salvarDraft(); render();
-  }
-  if (a === "respick") {
-    const g = el.getAttribute("data-g"), t = el.getAttribute("data-t");
-    S.resTemp.grupos[g] = alternar(S.resTemp.grupos[g], t);
-    S.resSujo = true; render();
   }
 });
 
@@ -1045,7 +1010,6 @@ document.addEventListener("change", e => {
   if (!el) return;
   const a = el.getAttribute("data-acao");
   if (a === "campeao" && !S.travado) { S.campeao = el.value || null; S.sujo = true; salvarDraft(); render(); }
-  if (a === "rescampeao") { S.resTemp.campeao = el.value || null; S.resSujo = true; render(); }
 });
 
 document.addEventListener("input", e => {
