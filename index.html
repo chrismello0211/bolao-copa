@@ -727,17 +727,19 @@ function abaPlacar() {
 
   const linhas = ranking.length === 0
     ? `<div class="card" style="text-align:center;color:var(--giz-apagado);font-size:14px;padding:18px">Ninguém palpitou ainda. Seja o primeiro! 🎯</div>`
-    : ranking.map((j,i) =>
-      `<div class="rank${i === 0 && temRes ? " lider" : ""}">` +
-      `<span class="pos">${temRes && i < 3 ? medalhas[i] : `<i>${i+1}º</i>`}</span>` +
-      avatarHtml(j.nome,36) +
-      `<span class="info"><b>${esc(j.nome)}${j.travado ? ' <span style="font-size:11px">🔒</span>' : ""}</b><small>${
-        temRes
-          ? `${j.p.acertos} de ${j.p.definidos} posições${j.p.bonus ? " · campeão ✓" : ""}${j.br.pts ? ` · placar +${j.br.pts}` : ""}`
-          : `${j.p.preenchidos}/25 palpites feitos`
-      }</small></span>` +
-      `<span class="pts"><b>${j.total}</b><small>PTS</small></span></div>`
-    ).join("");
+    : ranking.map((j,i) => {
+        const partes = [];
+        if (j.p.definidos > 0) partes.push(`${j.p.acertos} de ${j.p.definidos} posições`);
+        if (j.p.bonus) partes.push("campeão ✓");
+        if (j.br.pts) partes.push(`placar +${j.br.pts}`);
+        const sub = partes.length ? partes.join(" · ") : `${j.p.preenchidos}/25 palpites feitos`;
+        const medalha = temRes && i < 3 && j.total > 0;
+        return `<div class="rank${i === 0 && j.total > 0 ? " lider" : ""}">` +
+          `<span class="pos">${medalha ? medalhas[i] : `<i>${i+1}º</i>`}</span>` +
+          avatarHtml(j.nome,36) +
+          `<span class="info"><b>${esc(j.nome)}${j.travado ? ' <span style="font-size:11px">🔒</span>' : ""}</b><small>${sub}</small></span>` +
+          `<span class="pts"><b>${j.total}</b><small>PTS</small></span></div>`;
+      }).join("");
 
   const grupos = GRUPOS.map(([l]) => {
     const realN = normPick(S.resultados.grupos[l]);
