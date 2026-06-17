@@ -389,7 +389,7 @@ const S = {
   aba: "palpites",
   palpites: {}, campeao: null, sujo: false, salvoAs: null, salvando: false,
   travado: false, travadoEm: null,
-  vice: null, terceiro: null, podioTravado: false, podioSujo: false, salvandoPodio: false,
+  vice: null, terceiro: null, podioSujo: false,
   jogadores: [], resultados: { grupos:{}, campeao:null, vice:null, terceiro:null },
   resTemp: { grupos:{}, campeao:null }, resSujo: false, salvandoRes: false,
   brJogos: {}, brPalpites: {}, brOfTemp: {}, brMeuTemp: {}, brSujo: false, salvandoBr: false, brForm: false,
@@ -415,10 +415,10 @@ onValue(ref(db, "bolao/jogadores"), snap => {
       S.travado = false; S.travadoEm = null;
     }
     // Pódio (vice/3º) é independente do travamento dos palpites principais
+    // 2º/3º são editáveis por todos até a véspera do mata-mata
     if (meu && !S.podioSujo) {
       S.vice = meu.vice || null;
       S.terceiro = meu.terceiro || null;
-      S.podioTravado = !!meu.podioTravado;
     }
   }
   S.pronto = true; renderSeguro();
@@ -571,13 +571,12 @@ function entrar(n) {
     S.travadoEm = meu.travadoEm || null;
     S.vice = meu.vice || null;
     S.terceiro = meu.terceiro || null;
-    S.podioTravado = !!meu.podioTravado;
   } else {
     const d = lerDraft(limpo);
     S.palpites = d ? normTodos(d.palpites) : {};
     S.campeao = d ? d.campeao || null : null;
     S.travado = false; S.travadoEm = null;
-    S.vice = null; S.terceiro = null; S.podioTravado = false;
+    S.vice = null; S.terceiro = null;
   }
   S.podioSujo = false;
   S.brMeuTemp = montarMeu(); S.brOfTemp = montarOficial(); S.brSujo = false;
@@ -603,22 +602,15 @@ async function salvarPalpites(travar) {
   S.salvando = false; render(); avisar(msg, tipo);
 }
 
-function podioFechado() { return S.podioTravado || podioComecou(); }
+function podioFechado() { return podioComecou(); }
 
-async function salvarPodio() {
-  if (!S.nome || S.salvandoPodio || podioFechado()) return;
-  if (!S.vice || !S.terceiro) { avisar("Escolha o 2º e o 3º lugar antes de confirmar.", "erro"); return; }
-  S.salvandoPodio = true; render();
-  let msg = "Pódio confirmado e travado! 🏅", tipo = "";
+async function salvarPodioAuto() {
+  if (!S.nome || podioFechado()) return;
   try {
-    const agora = Date.now();
     await update(ref(db, "bolao/jogadores/" + slug(S.nome)),
-      { nome: S.nome, vice: S.vice, terceiro: S.terceiro, podioTravado: true, podioTravadoEm: agora });
-    S.podioTravado = true; S.podioSujo = false;
-  } catch (e) {
-    msg = "Não consegui confirmar. Tenta de novo."; tipo = "erro";
-  }
-  S.salvandoPodio = false; render(); avisar(msg, tipo);
+      { nome: S.nome, vice: S.vice || null, terceiro: S.terceiro || null });
+  } catch (e) {}
+  S.podioSujo = false;
 }
 
 async function salvarResultados() {
@@ -761,19 +753,18 @@ function abaPalpites() {
   const linhaP = (rot, val, ico) =>
     `<div style="display:flex;align-items:center;gap:8px;font-size:14px;margin:5px 0"><span>${ico}</span>` +
     `<b>${rot}:</b> ${val ? `${flagDe(val)} ${esc(nomeDe(val))}` : `<span class="apagado">não escolhido</span>`}</div>`;
-  const faltaP = !S.vice || !S.terceiro;
   const podio = fechadoP
     ? `<div class="card" style="border-color:rgba(244,200,75,.35)">` +
         `<b style="font-size:15px;font-weight:800">🏅 Pódio da Copa</b>` +
         linhaP("Vice (2º)", S.vice, "🥈") + linhaP("3º lugar", S.terceiro, "🥉") +
-        `<div class="apagado" style="font-size:12px;margin-top:8px">🔒 ${S.podioTravado ? "Pódio confirmado — não dá mais pra trocar." : "Pódio fechado (mata-mata começou)."}</div>` +
+        `<div class="apagado" style="font-size:12px;margin-top:8px">🔒 2º e 3º travados — o mata-mata começou.</div>` +
       `</div>`
     : `<div class="card" style="border-color:rgba(244,200,75,.35)">` +
         `<b style="font-size:15px;font-weight:800">🏅 Pódio da Copa</b>` +
-        `<div class="suave" style="font-size:12.5px;line-height:1.5;margin:6px 0 2px">Além do campeão, complete o pódio: quem fica em <b>2º</b> (vice, +3 pts) e em <b>3º</b> lugar (+2 pts). <b>Ao confirmar, trava.</b> Quem não confirmar trava sozinho no início do mata-mata (28/06).</div>` +
+        `<div class="suave" style="font-size:12.5px;line-height:1.5;margin:6px 0 2px">Palpite de <b>2º</b> (vice, +3 pts) e <b>3º</b> lugar (+2 pts) da Copa. Dá pra <b>mudar quando quiser até a véspera do mata-mata (27/06)</b> — a ideia é apostar olhando quem foi se classificando. Salva sozinho a cada escolha. <i>O campeão não muda, fica o palpite inicial.</i></div>` +
         htmlSelTime(S.vice, "vice", "Vice-campeão (2º lugar)", "Vale +3 pontos", "🥈", false) +
         htmlSelTime(S.terceiro, "terceiro", "Terceiro lugar", "Vale +2 pontos", "🥉", false) +
-        `<button class="btn btn-lock" style="margin-top:14px" data-acao="confirmarpodio"${faltaP ? " disabled" : ""}>${faltaP ? "Escolha o 2º e o 3º lugar" : "🔒 Confirmar pódio"}</button>` +
+        `<div class="apagado" style="font-size:11.5px;margin-top:10px">✓ Salvo automaticamente. Você pode voltar e trocar até 27/06.</div>` +
       `</div>`;
   return `<div class="bloco">` + topo +
     GRUPOS.map(([l, ts]) => htmlCardGrupo(l, ts, S.palpites[l], S.resultados.grupos[l], "pick", trava)).join("") +
@@ -1093,7 +1084,6 @@ document.addEventListener("click", e => {
     if (p < 25) { avisar("Complete os 25 palpites antes de enviar.", "erro"); return; }
     salvarPalpites(true);
   }
-  if (a === "confirmarpodio") salvarPodio();
 
   if (a === "pick") {
     if (S.travado) return;
@@ -1108,8 +1098,8 @@ document.addEventListener("change", e => {
   if (!el) return;
   const a = el.getAttribute("data-acao");
   if (a === "campeao" && !S.travado) { S.campeao = el.value || null; S.sujo = true; salvarDraft(); render(); }
-  if (a === "vice" && !podioFechado()) { S.vice = el.value || null; S.podioSujo = true; render(); }
-  if (a === "terceiro" && !podioFechado()) { S.terceiro = el.value || null; S.podioSujo = true; render(); }
+  if (a === "vice" && !podioFechado()) { S.vice = el.value || null; S.podioSujo = true; render(); salvarPodioAuto(); }
+  if (a === "terceiro" && !podioFechado()) { S.terceiro = el.value || null; S.podioSujo = true; render(); salvarPodioAuto(); }
 });
 
 document.addEventListener("input", e => {
