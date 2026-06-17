@@ -760,11 +760,12 @@ function abaPalpites() {
         `<div class="apagado" style="font-size:12px;margin-top:8px">🔒 2º e 3º travados — o mata-mata começou.</div>` +
       `</div>`
     : `<div class="card" style="border-color:rgba(244,200,75,.35)">` +
-        `<b style="font-size:15px;font-weight:800">🏅 Pódio da Copa</b>` +
-        `<div class="suave" style="font-size:12.5px;line-height:1.5;margin:6px 0 2px">Palpite de <b>2º</b> (vice, +3 pts) e <b>3º</b> lugar (+2 pts) da Copa. Dá pra <b>mudar quando quiser até a véspera do mata-mata (27/06)</b> — a ideia é apostar olhando quem foi se classificando. Salva sozinho a cada escolha. <i>O campeão não muda, fica o palpite inicial.</i></div>` +
+        `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><b style="font-size:15px;font-weight:800">🏅 Pódio da Copa</b>` +
+        `<span style="flex:none;font-size:11px;font-weight:700;color:var(--ouro);border:1px solid rgba(244,200,75,.45);border-radius:999px;padding:3px 10px;white-space:nowrap">🗓️ até 27/06</span></div>` +
+        `<div class="suave" style="font-size:12.5px;line-height:1.5;margin:8px 0 2px">Palpite de <b>2º</b> (vice, +3 pts) e <b>3º</b> lugar (+2 pts) da Copa — dá pra mudar quando quiser até a véspera do mata-mata, apostando conforme quem vai se classificando. <i>O campeão não muda, fica o palpite inicial.</i></div>` +
         htmlSelTime(S.vice, "vice", "Vice-campeão (2º lugar)", "Vale +3 pontos", "🥈", false) +
         htmlSelTime(S.terceiro, "terceiro", "Terceiro lugar", "Vale +2 pontos", "🥉", false) +
-        `<div class="apagado" style="font-size:11.5px;margin-top:10px">✓ Salvo automaticamente. Você pode voltar e trocar até 27/06.</div>` +
+        `<div class="apagado" style="font-size:11.5px;margin-top:10px">✓ Salvo automaticamente.</div>` +
       `</div>`;
   return `<div class="bloco">` + topo +
     GRUPOS.map(([l, ts]) => htmlCardGrupo(l, ts, S.palpites[l], S.resultados.grupos[l], "pick", trava)).join("") +
