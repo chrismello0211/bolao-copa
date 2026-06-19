@@ -149,11 +149,14 @@ select.sel-camp:not(.tem){color:var(--giz-apagado)}
   border-top:1px solid var(--borda);padding-bottom:env(safe-area-inset-bottom,0px)}
 .tabbar-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
 .tab{padding:9px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;
-  color:var(--giz-apagado);border-top:2px solid transparent}
+  color:var(--giz-apagado);border-top:2px solid transparent;position:relative}
 .tab .ico{font-size:19px;filter:grayscale(.7)}
 .tab small{font-size:10.5px;font-weight:700;letter-spacing:.02em}
 .tab.on{color:var(--ouro);border-top-color:var(--ouro)}
 .tab.on .ico{filter:none}
+.badge-dot{position:absolute;top:5px;left:calc(50% + 7px);width:8px;height:8px;border-radius:50%;
+  background:var(--vermelho);border:2px solid var(--fundo);box-sizing:content-box;
+  box-shadow:0 0 0 1px rgba(229,84,77,.45)}
 
 /* ---------- Setup / login ---------- */
 .centro{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
@@ -491,6 +494,18 @@ function montarMeu() {
   const m = {};
   for (const gid in p) m[gid] = { b: p[gid].b ?? null, a: p[gid].a ?? null };
   return m;
+}
+
+/* Há jogo do Brasil que ainda não começou e que a pessoa não preencheu/salvou? */
+function brasilPendente() {
+  if (!S.nome) return false;
+  const salvos = (S.brPalpites || {})[slug(S.nome)] || {};
+  for (const gid in (S.brOfTemp || {})) {
+    if (jogoComecou(gid)) continue;
+    const m = salvos[gid];
+    if (!(m && m.b !== null && m.b !== "" && m.a !== null && m.a !== "")) return true;
+  }
+  return false;
 }
 
 function renderSeguro() {
@@ -1046,6 +1061,7 @@ function render() {
   }
 
   const tabs = [["palpites","Palpites","✏️"],["placar","Placar","🏆"],["brasil","Brasil","🇧🇷"],["resultados","Resultados","📋"]];
+  const brAviso = brasilPendente();
 
   app.innerHTML =
     `<header class="hd"><div class="hd-in">` +
@@ -1062,7 +1078,8 @@ function render() {
     `<nav class="tabbar"><div class="tabbar-in">` +
       tabs.map(([id, rot, ico]) =>
         `<button class="tab${S.aba === id ? " on" : ""}" data-acao="aba" data-aba="${id}">` +
-        `<span class="ico">${ico}</span><small>${rot}</small></button>`).join("") +
+        `<span class="ico">${ico}</span><small>${rot}</small>` +
+        `${id === "brasil" && brAviso ? `<span class="badge-dot"></span>` : ""}</button>`).join("") +
     `</div></nav>`;
 
   window.scrollTo(0, y);
