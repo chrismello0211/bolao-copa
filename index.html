@@ -160,6 +160,11 @@ select.sel-camp:not(.tem){color:var(--giz-apagado)}
 .secao-mm{font-weight:800;font-size:13.5px;letter-spacing:.02em;color:var(--ouro);
   margin:20px 2px 11px;padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.09)}
 .secao-mm.encerrada{color:var(--giz-apagado);margin-top:28px}
+.grupos-enc{margin-top:26px}
+.grupos-enc>summary{cursor:pointer;list-style:none;font-weight:800;font-size:13px;color:var(--giz-apagado);
+  padding:11px 12px;border:1px solid rgba(255,255,255,.09);border-radius:12px;text-align:center}
+.grupos-enc>summary::-webkit-details-marker{display:none}
+.grupos-enc[open]>summary{margin-bottom:12px}
 .mm-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;
   margin:0 0 14px;padding:12px 14px;border-radius:14px;color:#15240F;font-size:13.5px;
   background:linear-gradient(100deg,var(--ouro),#f0a93a);box-shadow:0 4px 16px rgba(244,200,75,.28)}
@@ -325,6 +330,21 @@ const fb = initializeApp(window.FIREBASE_CONFIG);
 const db = getDatabase(fb);
 window.__FB_OK = true;
 clearTimeout(window.__WATCHDOG);
+
+/* ---------- Auto-atualização (resolve cache de app instalado na tela inicial) ---------- */
+const APP_VERSION = "mm2-20260628";
+async function checarVersao() {
+  try {
+    const r = await fetch("versao.txt?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) return;
+    const v = (await r.text()).trim();
+    if (!v || v === APP_VERSION) return;                                  // já estou atualizado
+    if (new URLSearchParams(location.search).get("v") === v) return;      // evita loop de reload
+    location.replace(location.pathname + "?v=" + encodeURIComponent(v));  // busca o HTML novo (sem cache)
+  } catch (e) {}
+}
+checarVersao();
+document.addEventListener("visibilitychange", () => { if (!document.hidden) checarVersao(); });
 
 /* ---------- Dados da Copa ---------- */
 const TIMES = {
@@ -1043,7 +1063,7 @@ function abaBrasil() {
     html += `<div class="apagado" style="text-align:center;font-size:12.5px;padding:18px 6px">🏆 Os jogos do mata-mata aparecem aqui assim que forem cadastrados.</div>`;
   }
   if (grupos.length) {
-    html += `<div class="secao-mm encerrada">✅ Fase de grupos · Brasil <span style="font-weight:600;opacity:.75">(encerrada)</span></div>` + grupos.map(htmlJogoBr).join("");
+    html += `<details class="grupos-enc"><summary>✅ Ver fase de grupos do Brasil (encerrada)</summary>` + grupos.map(htmlJogoBr).join("") + `</details>`;
   }
   return `<div class="bloco">` + html + `</div>`;
 }
