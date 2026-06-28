@@ -157,6 +157,14 @@ select.sel-camp:not(.tem){color:var(--giz-apagado)}
 .badge-dot{position:absolute;top:5px;left:calc(50% + 7px);width:8px;height:8px;border-radius:50%;
   background:var(--vermelho);border:2px solid var(--fundo);box-sizing:content-box;
   box-shadow:0 0 0 1px rgba(229,84,77,.45)}
+.secao-mm{font-weight:800;font-size:13.5px;letter-spacing:.02em;color:var(--ouro);
+  margin:20px 2px 11px;padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.09)}
+.secao-mm.encerrada{color:var(--giz-apagado);margin-top:28px}
+.mm-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;
+  margin:0 0 14px;padding:12px 14px;border-radius:14px;color:#15240F;font-size:13.5px;
+  background:linear-gradient(100deg,var(--ouro),#f0a93a);box-shadow:0 4px 16px rgba(244,200,75,.28)}
+.mm-banner-tx{line-height:1.35}
+.mm-banner-go{font-weight:800;white-space:nowrap}
 
 /* ---------- Setup / login ---------- */
 .centro{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
@@ -348,9 +356,9 @@ const GRUPOS = [
 const CORES_AVATAR = ["#F4C84B","#34C77B","#5AA9E6","#E5544D","#B07CF0","#F08A4B"];
 
 const JOGOS_BR_FIXOS = [
-  { id: "g1", ordem: 1, fase: "Grupo C · Rodada 1", adv: "MAR", data: "Sáb 13/06 · 19h", kick: Date.parse("2026-06-13T19:00:00-03:00"), local: "MetLife Stadium · Nova Jersey" },
-  { id: "g2", ordem: 2, fase: "Grupo C · Rodada 2", adv: "HAI", data: "Sex 19/06 · 21h30", kick: Date.parse("2026-06-19T21:30:00-03:00"), local: "Lincoln Financial Field · Filadélfia" },
-  { id: "g3", ordem: 3, fase: "Grupo C · Rodada 3", adv: "SCO", data: "Qua 24/06 · 19h", kick: Date.parse("2026-06-24T19:00:00-03:00"), local: "Hard Rock Stadium · Miami" }
+  { id: "g1", ordem: 1, etapa: "grupos", fase: "Grupo C · Rodada 1", casa: "BRA", fora: "MAR", data: "Sáb 13/06 · 19h", kick: Date.parse("2026-06-13T19:00:00-03:00"), local: "MetLife Stadium · Nova Jersey" },
+  { id: "g2", ordem: 2, etapa: "grupos", fase: "Grupo C · Rodada 2", casa: "BRA", fora: "HAI", data: "Sex 19/06 · 21h30", kick: Date.parse("2026-06-19T21:30:00-03:00"), local: "Lincoln Financial Field · Filadélfia" },
+  { id: "g3", ordem: 3, etapa: "grupos", fase: "Grupo C · Rodada 3", casa: "BRA", fora: "SCO", data: "Qua 24/06 · 19h", kick: Date.parse("2026-06-24T19:00:00-03:00"), local: "Hard Rock Stadium · Miami" }
 ];
 const FASES_MM = ["16 avos de final", "Oitavas de final", "Quartas de final", "Semifinal", "Disputa de 3º lugar", "Final"];
 
@@ -452,14 +460,21 @@ function montarOficial() {
   for (const f of JOGOS_BR_FIXOS) {
     const d = dbj[f.id] || {};
     m[f.id] = { id: f.id, fixo: true, ordem: d.ordem || f.ordem,
-      fase: d.fase || f.fase, adv: ("adv" in d) ? d.adv : f.adv,
+      etapa: d.etapa || f.etapa || "grupos",
+      fase: d.fase || f.fase,
+      casa: d.casa || f.casa || "BRA",
+      fora: ("fora" in d) ? d.fora : (("adv" in d) ? d.adv : f.fora),
       data: d.data || f.data, kick: d.kick || f.kick || null, local: d.local || f.local,
       oficial: d.oficial || { b: null, a: null } };
   }
   for (const k in dbj) if (!m[k]) {
     const d = dbj[k];
-    m[k] = { id: k, fixo: false, ordem: d.ordem || 0, fase: d.fase || "",
-      adv: d.adv || null, data: d.data || "", kick: d.kick || null, local: d.local || "",
+    m[k] = { id: k, fixo: false, ordem: d.ordem || 0,
+      etapa: d.etapa || "mata",
+      fase: d.fase || "",
+      casa: d.casa || "BRA",
+      fora: ("fora" in d) ? d.fora : (d.adv || null),
+      data: d.data || "", kick: d.kick || null, local: d.local || "",
       oficial: d.oficial || { b: null, a: null } };
   }
   return m;
@@ -501,6 +516,8 @@ function brasilPendente() {
   if (!S.nome) return false;
   const salvos = (S.brPalpites || {})[slug(S.nome)] || {};
   for (const gid in (S.brOfTemp || {})) {
+    const jg = S.brOfTemp[gid];
+    if (!jg || !jg.casa || !jg.fora) continue;   // confronto ainda não definido
     if (jogoComecou(gid)) continue;
     const m = salvos[gid];
     if (!(m && m.b !== null && m.b !== "" && m.a !== null && m.a !== "")) return true;
@@ -868,7 +885,7 @@ function abaPlacar() {
   const comoPontua = `<details class="comopontua"><summary>ℹ️ Como funciona a pontuação</summary>` +
     `<div class="corpo">` +
     `🏅 <b>Fase de grupos</b><br>· 1º colocado certo: <b>3 pts</b><br>· 2º colocado certo: <b>2 pts</b><br><br>` +
-    `🇧🇷 <b>Jogos do Brasil</b> (e mata-mata)<br>· Placar exato: <b>3 pts</b><br>· Só o vencedor (ou empate) certo: <b>1 pt</b><br><br>` +
+    `⚔️ <b>Jogos do mata-mata</b> (e fase de grupos do Brasil)<br>· Placar exato: <b>3 pts</b><br>· Só o vencedor (ou empate) certo: <b>1 pt</b><br><br>` +
     `🏆 <b>Pódio do mundial</b><br>· Campeão: <b>5 pts</b> · Vice: <b>3 pts</b> · 3º lugar: <b>2 pts</b><br><br>` +
     `<span class="apagado">Tudo atualiza conforme os jogos acontecem. Posição em branco = empate ou ainda sem jogo.</span>` +
     `</div></details>`;
@@ -964,8 +981,11 @@ function refreshJogoBr(id) {
 }
 
 function htmlJogoBr(j) {
-  const advFlag = j.adv ? flagDe(j.adv) : "❓";
-  const advNome = j.adv ? nomeDe(j.adv) : "A definir";
+  const casaFlag = j.casa ? flagDe(j.casa) : "❓";
+  const casaNome = j.casa ? nomeDe(j.casa) : "A definir";
+  const foraFlag = j.fora ? flagDe(j.fora) : "❓";
+  const foraNome = j.fora ? nomeDe(j.fora) : "A definir";
+  const indef = !j.casa || !j.fora;
   const of = j.oficial || {};
   const temOf = of.b != null && of.b !== "" && of.a != null && of.a !== "";
   const bi = bandInfo(of);
@@ -975,27 +995,29 @@ function htmlJogoBr(j) {
   const meu = comecou ? salvo : (S.brMeuTemp[j.id] || {});
   const oficialRow =
     `<div class="placarrow">` +
-      `<span class="ptime"><span class="pflag">🇧🇷</span><span class="pnome">Brasil</span></span>` +
+      `<span class="ptime"><span class="pflag">${casaFlag}</span><span class="pnome">${esc(casaNome)}</span></span>` +
       `<span class="goread">${temOf ? of.b : "–"}</span>` +
       `<span class="px">×</span>` +
       `<span class="goread">${temOf ? of.a : "–"}</span>` +
-      `<span class="ptime"><span class="pflag">${advFlag}</span><span class="pnome">${esc(advNome)}</span></span>` +
+      `<span class="ptime"><span class="pflag">${foraFlag}</span><span class="pnome">${esc(foraNome)}</span></span>` +
     `</div>`;
-  const meuRow = comecou
+  const meuRow = indef
+    ? `<div class="apagado" style="text-align:center;font-size:11.5px;padding:6px 0">⏳ Adversário ainda não definido — volte quando o confronto fechar</div>`
+    : comecou
     ? `<div class="placarrow">` +
-        `<span class="ptime"><span class="pflag">🇧🇷</span><span class="pnome">Brasil</span></span>` +
+        `<span class="ptime"><span class="pflag">${casaFlag}</span><span class="pnome">${esc(casaNome)}</span></span>` +
         `<span class="goread">${meu.b ?? "–"}</span>` +
         `<span class="px">×</span>` +
         `<span class="goread">${meu.a ?? "–"}</span>` +
-        `<span class="ptime"><span class="pflag">${advFlag}</span><span class="pnome">${esc(advNome)}</span></span>` +
+        `<span class="ptime"><span class="pflag">${foraFlag}</span><span class="pnome">${esc(foraNome)}</span></span>` +
       `</div>` +
       `<div class="apagado" style="text-align:center;font-size:11.5px;margin-top:7px">🔒 Palpite fechado — o jogo já começou</div>`
     : `<div class="placarrow">` +
-        `<span class="ptime"><span class="pflag">🇧🇷</span><span class="pnome">Brasil</span></span>` +
+        `<span class="ptime"><span class="pflag">${casaFlag}</span><span class="pnome">${esc(casaNome)}</span></span>` +
         `<input class="pgol" inputmode="numeric" maxlength="2" data-kind="me" data-id="${j.id}" data-lado="b" value="${meu.b ?? ""}">` +
         `<span class="px">×</span>` +
         `<input class="pgol" inputmode="numeric" maxlength="2" data-kind="me" data-id="${j.id}" data-lado="a" value="${meu.a ?? ""}">` +
-        `<span class="ptime"><span class="pflag">${advFlag}</span><span class="pnome">${esc(advNome)}</span></span>` +
+        `<span class="ptime"><span class="pflag">${foraFlag}</span><span class="pnome">${esc(foraNome)}</span></span>` +
       `</div>`;
   return `<div class="card" style="position:relative">` +
     `<div class="jbr-cab"><b style="color:var(--giz);font-weight:800;font-size:13px">${esc(j.fase)}</b><span>${esc(j.data || "")}</span></div>` +
@@ -1011,10 +1033,19 @@ function htmlJogoBr(j) {
 function abaBrasil() {
   if (!Object.keys(S.brOfTemp).length) S.brOfTemp = montarOficial();
   const lista = Object.values(S.brOfTemp).sort((x, y) => (x.ordem || 0) - (y.ordem || 0));
-  const cards = lista.map(htmlJogoBr).join("");
-  return `<div class="bloco">` +
-    `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">Cada um informa só o <b>seu palpite de placar</b> dos jogos da Seleção — todo mundo vê o de todo mundo. O <b>resultado oficial</b> é preenchido pela organização depois que o jogo acaba, e o app marca quem cravou o placar (✓). 🇧🇷</div>` +
-    cards + `</div>`;
+  const mata = lista.filter(j => j.etapa === "mata");
+  const grupos = lista.filter(j => j.etapa !== "mata");
+  let html =
+    `<div class="suave" style="font-size:13px;line-height:1.5;padding:0 2px">No mata-mata, cada um informa o <b>seu palpite de placar</b> de cada jogo — todo mundo vê o de todos. O <b>resultado oficial</b> é preenchido pela organização depois que o jogo acaba, e o app marca quem cravou o placar (✓). Pontuação: placar exato <b>3 pts</b>, só o vencedor certo <b>1 pt</b>. 🏆</div>`;
+  if (mata.length) {
+    html += `<div class="secao-mm">🏆 Mata-mata</div>` + mata.map(htmlJogoBr).join("");
+  } else {
+    html += `<div class="apagado" style="text-align:center;font-size:12.5px;padding:18px 6px">🏆 Os jogos do mata-mata aparecem aqui assim que forem cadastrados.</div>`;
+  }
+  if (grupos.length) {
+    html += `<div class="secao-mm encerrada">✅ Fase de grupos · Brasil <span style="font-weight:600;opacity:.75">(encerrada)</span></div>` + grupos.map(htmlJogoBr).join("");
+  }
+  return `<div class="bloco">` + html + `</div>`;
 }
 
 /* ---------- Render ---------- */
@@ -1060,8 +1091,11 @@ function render() {
     acSave = "salvarres";
   }
 
-  const tabs = [["palpites","Palpites","✏️"],["placar","Placar","🏆"],["brasil","Brasil","🇧🇷"],["resultados","Resultados","📋"]];
+  const tabs = [["palpites","Palpites","✏️"],["placar","Placar","🏆"],["brasil","Mata-mata","⚔️"],["resultados","Resultados","📋"]];
   const brAviso = brasilPendente();
+  const bannerMM = (brAviso && S.aba !== "brasil")
+    ? `<div class="mm-banner" data-acao="aba" data-aba="brasil"><span class="mm-banner-tx">⚔️ <b>Mata-mata!</b> Você tem jogo pra palpitar — toque aqui.</span><span class="mm-banner-go">Preencher ›</span></div>`
+    : "";
 
   app.innerHTML =
     `<header class="hd"><div class="hd-in">` +
@@ -1069,7 +1103,7 @@ function render() {
       `<b>Bolão da Família</b></div>` +
       `<button class="pill" data-acao="trocar" title="Trocar de pessoa">${avatarHtml(S.nome,26)}<span>${esc(S.nome.split(" ")[0])}</span></button>` +
     `</div></header>` +
-    `<main>${conteudo}</main>` +
+    `<main>${bannerMM}${conteudo}</main>` +
     `<div class="savebar${precisaSavebar() ? " on" : ""}"><div class="savebar-in">` +
       `<span class="st">${stSave}</span>` +
       `<button data-acao="${acSave}"${btDis ? " disabled" : ""}>${btSave}</button>` +
